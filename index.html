@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Legends: The Shattered Realm</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700&display=swap');
+        
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #050505; color: white; font-family: 'Cinzel', serif; }
+        
+        /* Conteneur de jeu */
+        #game-container { position: relative; width: 100vw; height: 100vh; }
+        canvas { display: block; width: 100%; height: 100%; background: radial-gradient(circle, #1a1a2e 0%, #0a0a0a 100%); }
+
+        /* HUD Supérieur (Stats) */
+        .hud-top {
+            position: absolute; top: 20px; left: 20px; width: 250px;
+            pointer-events: none;
+        }
+        .bar-wrapper { margin-bottom: 8px; filter: drop-shadow(0 0 5px rgba(0,0,0,0.5)); }
+        .bar-label { font-size: 10px; margin-bottom: 2px; color: #D4AF37; text-transform: uppercase; }
+        .bar-bg { width: 100%; height: 8px; background: rgba(0,0,0,0.6); border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 4px; overflow: hidden; }
+        .bar-fill { height: 100%; transition: width 0.3s ease; }
+        .health { background: linear-gradient(90deg, #8b0000, #ff4444); box-shadow: 0 0 10px #ff444455; }
+        .stamina { background: linear-gradient(90deg, #2d5016, #4caf50); }
+
+        /* Titre Mobile */
+        .game-title {
+            position: absolute; top: 20px; width: 100%; text-align: center;
+            font-size: 1.2rem; color: #D4AF37; text-shadow: 0 0 10px rgba(212, 175, 55, 0.8);
+            pointer-events: none; letter-spacing: 2px;
+        }
+
+        /* Commandes Tactiles (Joystick) */
+        #joystick-container {
+            position: absolute; bottom: 50px; left: 50px;
+            width: 120px; height: 120px; background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%; display: none; /* Apparaît sur mobile */
+            border: 2px solid rgba(212, 175, 55, 0.2);
+        }
+        #joystick-stick {
+            position: absolute; top: 35px; left: 35px;
+            width: 50px; height: 50px; background: #D4AF37;
+            border-radius: 50%; box-shadow: 0 0 15px rgba(212, 175, 55, 0.5);
+        }
+
+        /* Menu de mort / pause */
+        #overlay {
+            position: absolute; inset: 0; background: rgba(0,0,0,0.8);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 10; display: none;
+        }
+        .btn-action {
+            background: none; border: 2px solid #D4AF37; color: #D4AF37;
+            padding: 15px 40px; font-family: 'Cinzel'; cursor: pointer;
+            font-size: 1.5rem; transition: 0.3s;
+        }
+        .btn-action:hover { background: #D4AF37; color: black; }
+
+        @media (max-width: 768px) { #joystick-container { display: block; } }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div class="game-title">Legends: Shattered Realm</div>
+    
+    <div class="hud-top">
+        <div class="bar-wrapper">
+            <div class="bar-label">Vitalité</div>
+            <div class="bar-bg"><div id="hp" class="bar-fill health" style="width: 100%;"></div></div>
+        </div>
+        <div class="bar-wrapper">
+            <div class="bar-label">Endurance</div>
+            <div class="bar-bg"><div id="stm" class="bar-fill stamina" style="width: 100%;"></div></div>
+        </div>
+    </div>
+
+    <div id="joystick-container"><div id="joystick-stick"></div></div>
+    
+    <div id="overlay">
+        <h1 id="status-text" style="color:#D4AF37; margin-bottom: 20px;">VOUS ÊTES MORT</h1>
+        <button class="btn-action" onclick="resetGame()">RENAÎTRE</button>
+    </div>
+
+    <canvas id="world"></canvas>
+</div>
+
+<script>
+    const canvas = document.getElementById('world');
+    const ctx = canvas.getContext('2d');
+    const hpBar = document.getElementById('hp');
+    
+    let width, height;
+    let player = { x: 0, y: 0, targetX: 0, targetY: 0, hp: 100, speed: 4 };
+    let keys = {};
+    let particles = [];
+    let worldObjects = [];
+    let time = 0;
+
+    function resize() {
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // Génération d'un monde aléatoire (Arbres/Ruines style Elden Ring)
+    function initWorld() {
+        worldObjects = [];
+        for(let i=0; i<40; i++) {
+            worldObjects.push({
+                x: (Math.random() - 0.5) * 2000,
+                y: (Math.random() - 0.5) * 2000,
+                size: Math.random() * 30 + 20,
+                color: Math.random() > 0.8 ? '#D4AF37' : '#2d5016'
+            });
+        }
+    }
+
+    // Gestion Inputs (Clavier + Tactile)
+    window.addEventListener('keydown', e => keys[e.code] = true);
+    window.addEventListener('keyup', e => keys[e.code] = false);
+
+    function update() {
+        // Mouvement
+        let dx = 0, dy = 0;
+        if(keys['KeyW'] || keys['ArrowUp']) dy -= player.speed;
+        if(keys['KeyS'] || keys['ArrowDown']) dy += player.speed;
+        if(keys['KeyA'] || keys['ArrowLeft']) dx -= player.speed;
+        if(keys['KeyD'] || keys['ArrowRight']) dx += player.speed;
+        
+        player.x += dx;
+        player.y += dy;
+
+        // Ambiance (Cycle de lumière)
+        time += 0.002;
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, width, height);
+        
+        // Caméra centrée sur le joueur
+        const camX = width/2 - player.x;
+        const camY = height/2 - player.y;
+
+        ctx.save();
+        ctx.translate(camX, camY);
+
+        // Grille de sol (style Tsushima / Zelda)
+        ctx.strokeStyle = "rgba(212, 175, 55, 0.1)";
+        ctx.lineWidth = 1;
+        for(let i=-1000; i<=1000; i+=100) {
+            ctx.beginPath(); ctx.moveTo(i, -1000); ctx.lineTo(i, 1000); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(-1000, i); ctx.lineTo(1000, i); ctx.stroke();
+        }
+
+        // Dessiner les objets du monde
+        worldObjects.forEach(obj => {
+            // Effet d'ombre portée
+            ctx.fillStyle = "rgba(0,0,0,0.3)";
+            ctx.beginPath();
+            ctx.ellipse(obj.x, obj.y + obj.size/2, obj.size/2, obj.size/4, 0, 0, Math.PI*2);
+            ctx.fill();
+
+            // L'objet (Arbre ou Ruine)
+            ctx.fillStyle = obj.color;
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = obj.color;
+            ctx.fillRect(obj.x - obj.size/2, obj.y - obj.size, obj.size, obj.size);
+            ctx.shadowBlur = 0;
+        });
+
+        // Joueur (Le Vagabond)
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = "#D4AF37";
+        ctx.fillStyle = "#D4AF37";
+        ctx.beginPath();
+        ctx.arc(player.x, player.y, 15, 0, Math.PI*2);
+        ctx.fill();
+        
+        // Halo de lumière autour du joueur (Style Zelda dans les grottes)
+        const gradient = ctx.createRadialGradient(player.x, player.y, 0, player.x, player.y, 300);
+        gradient.addColorStop(0, "rgba(212, 175, 55, 0.1)");
+        gradient.addColorStop(1, "transparent");
+        ctx.fillStyle = gradient;
+        ctx.beginPath(); ctx.arc(player.x, player.y, 300, 0, Math.PI*2); ctx.fill();
+
+        ctx.restore();
+
+        // Filtre de nuit (Atmosphère)
+        const nightAlpha = (Math.sin(time) + 1) / 4; // Varie entre 0 et 0.5
+        ctx.fillStyle = `rgba(10, 14, 39, ${nightAlpha})`;
+        ctx.fillRect(0, 0, width, height);
+
+        requestAnimationFrame(() => {
+            update();
+            draw();
+        });
+    }
+
+    function resetGame() {
+        player.x = 0; player.y = 0;
+        document.getElementById('overlay').style.display = 'none';
+    }
+
+    initWorld();
+    draw();
+</script>
+</body>
+</html>
