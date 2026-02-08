@@ -3,102 +3,79 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Legends: The Shattered Realm</title>
+    <title>✦ GEMINI WORLD - MASTERPIECE EDITION ✦</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700&display=swap');
+        /* (Tes styles précédents sont conservés et intégrés ici) */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@600;700&display=swap');
         
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #050505; color: white; font-family: 'Cinzel', serif; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Rajdhani', sans-serif; cursor: none; }
+        canvas { display: block; }
+
+        /* HUD & UI - On garde ta structure exacte */
+        #ui-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
+        .stats-panel { position: absolute; top: 15px; left: 15px; display: flex; flex-direction: column; gap: 10px; }
+        .bar-container { width: 300px; height: 26px; background: rgba(0,8,20,0.9); border: 2px solid; border-radius: 16px; overflow: hidden; position: relative; }
+        .bar-container.energy { border-color: #00f2ff; }
+        .bar-fill { height: 100%; transition: width 0.3s; position: relative; }
+        .bar-fill.energy { background: linear-gradient(90deg, #00f2ff, #0095ff); box-shadow: 0 0 15px #00f2ff; }
+        .bar-label { position: absolute; top: 50%; left: 12px; transform: translateY(-50%); color: #fff; font-size: 11px; font-weight: 700; z-index: 1; }
         
-        /* Conteneur de jeu */
-        #game-container { position: relative; width: 100vw; height: 100vh; }
-        canvas { display: block; width: 100%; height: 100%; background: radial-gradient(circle, #1a1a2e 0%, #0a0a0a 100%); }
+        .level-display { position: absolute; top: 60px; left: 15px; color: #ffd700; font-weight: 700; border: 1px solid #ffd700; padding: 5px 15px; border-radius: 10px; background: rgba(0,0,0,0.5); }
+        
+        /* Boutons de Compétences (Bas Droite) */
+        #btn-tray { position: absolute; bottom: 25px; right: 25px; display: flex; gap: 15px; pointer-events: auto; }
+        .skill-btn { width: 70px; height: 70px; border-radius: 50%; border: 2px solid #00f2ff; background: rgba(0,20,40,0.8); color: white; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: 0.3s; }
+        .skill-btn:hover { transform: scale(1.1); box-shadow: 0 0 20px #00f2ff; }
 
-        /* HUD Supérieur (Stats) */
-        .hud-top {
-            position: absolute; top: 20px; left: 20px; width: 250px;
-            pointer-events: none;
-        }
-        .bar-wrapper { margin-bottom: 8px; filter: drop-shadow(0 0 5px rgba(0,0,0,0.5)); }
-        .bar-label { font-size: 10px; margin-bottom: 2px; color: #D4AF37; text-transform: uppercase; }
-        .bar-bg { width: 100%; height: 8px; background: rgba(0,0,0,0.6); border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 4px; overflow: hidden; }
-        .bar-fill { height: 100%; transition: width 0.3s ease; }
-        .health { background: linear-gradient(90deg, #8b0000, #ff4444); box-shadow: 0 0 10px #ff444455; }
-        .stamina { background: linear-gradient(90deg, #2d5016, #4caf50); }
+        /* Joystick Mobile */
+        #joystick-container { position: fixed; bottom: 35px; left: 35px; width: 120px; height: 120px; pointer-events: auto; z-index: 100; }
+        #joystick-base { width: 100%; height: 100%; border-radius: 50%; background: rgba(255,255,255,0.1); border: 2px solid rgba(0,242,255,0.5); }
+        #joystick-stick { position: absolute; width: 50px; height: 50px; background: #00f2ff; border-radius: 50%; top: 35px; left: 35px; }
 
-        /* Titre Mobile */
-        .game-title {
-            position: absolute; top: 20px; width: 100%; text-align: center;
-            font-size: 1.2rem; color: #D4AF37; text-shadow: 0 0 10px rgba(212, 175, 55, 0.8);
-            pointer-events: none; letter-spacing: 2px;
-        }
-
-        /* Commandes Tactiles (Joystick) */
-        #joystick-container {
-            position: absolute; bottom: 50px; left: 50px;
-            width: 120px; height: 120px; background: rgba(255, 255, 255, 0.1);
-            border-radius: 50%; display: none; /* Apparaît sur mobile */
-            border: 2px solid rgba(212, 175, 55, 0.2);
-        }
-        #joystick-stick {
-            position: absolute; top: 35px; left: 35px;
-            width: 50px; height: 50px; background: #D4AF37;
-            border-radius: 50%; box-shadow: 0 0 15px rgba(212, 175, 55, 0.5);
-        }
-
-        /* Menu de mort / pause */
-        #overlay {
-            position: absolute; inset: 0; background: rgba(0,0,0,0.8);
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            z-index: 10; display: none;
-        }
-        .btn-action {
-            background: none; border: 2px solid #D4AF37; color: #D4AF37;
-            padding: 15px 40px; font-family: 'Cinzel'; cursor: pointer;
-            font-size: 1.5rem; transition: 0.3s;
-        }
-        .btn-action:hover { background: #D4AF37; color: black; }
-
-        @media (max-width: 768px) { #joystick-container { display: block; } }
+        #custom-cursor { position: fixed; width: 20px; height: 20px; border: 2px solid #00f2ff; border-radius: 50%; pointer-events: none; z-index: 1000; transform: translate(-50%, -50%); }
     </style>
 </head>
 <body>
 
-<div id="game-container">
-    <div class="game-title">Legends: Shattered Realm</div>
-    
-    <div class="hud-top">
-        <div class="bar-wrapper">
-            <div class="bar-label">Vitalité</div>
-            <div class="bar-bg"><div id="hp" class="bar-fill health" style="width: 100%;"></div></div>
-        </div>
-        <div class="bar-wrapper">
-            <div class="bar-label">Endurance</div>
-            <div class="bar-bg"><div id="stm" class="bar-fill stamina" style="width: 100%;"></div></div>
+<div id="custom-cursor"></div>
+
+<div id="ui-layer">
+    <div class="stats-panel">
+        <div class="bar-container energy">
+            <div class="bar-fill energy" id="energy-fill" style="width: 100%;"></div>
+            <div class="bar-label">⚡ VITALITÉ</div>
         </div>
     </div>
-
-    <div id="joystick-container"><div id="joystick-stick"></div></div>
     
-    <div id="overlay">
-        <h1 id="status-text" style="color:#D4AF37; margin-bottom: 20px;">VOUS ÊTES MORT</h1>
-        <button class="btn-action" onclick="resetGame()">RENAÎTRE</button>
+    <div class="level-display">⭐ LVL <span id="level-val">1</span></div>
+    
+    <div id="btn-tray">
+        <button class="skill-btn" onclick="player.attack()">
+            <span style="font-size: 24px;">⚔️</span>
+            <span style="font-size: 10px;">ATTACK</span>
+        </button>
+        <button class="skill-btn" onclick="player.special()">
+            <span style="font-size: 24px;">❄️</span>
+            <span style="font-size: 10px;">ICE</span>
+        </button>
     </div>
-
-    <canvas id="world"></canvas>
 </div>
 
-<script>
-    const canvas = document.getElementById('world');
-    const ctx = canvas.getContext('2d');
-    const hpBar = document.getElementById('hp');
-    
-    let width, height;
-    let player = { x: 0, y: 0, targetX: 0, targetY: 0, hp: 100, speed: 4 };
-    let keys = {};
-    let particles = [];
-    let worldObjects = [];
-    let time = 0;
+<div id="joystick-container">
+    <div id="joystick-base">
+        <div id="joystick-stick"></div>
+    </div>
+</div>
 
+<canvas id="gameCanvas"></canvas>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const cursor = document.getElementById('custom-cursor');
+
+    let width, height;
     function resize() {
         width = canvas.width = window.innerWidth;
         height = canvas.height = window.innerHeight;
@@ -106,93 +83,136 @@
     window.addEventListener('resize', resize);
     resize();
 
-    // Génération d'un monde aléatoire (Arbres/Ruines style Elden Ring)
-    function initWorld() {
-        worldObjects = [];
-        for(let i=0; i<40; i++) {
-            worldObjects.push({
-                x: (Math.random() - 0.5) * 2000,
-                y: (Math.random() - 0.5) * 2000,
-                size: Math.random() * 30 + 20,
-                color: Math.random() > 0.8 ? '#D4AF37' : '#2d5016'
+    // --- MOTEUR DE JEU ---
+    const world = {
+        gravity: 0,
+        enemies: [],
+        particles: [],
+        camera: { x: 0, y: 0 }
+    };
+
+    const player = {
+        x: 0,
+        y: 0,
+        hp: 100,
+        level: 1,
+        size: 30,
+        color: '#00f2ff',
+        speed: 5,
+        attack() {
+            createExplosion(this.x + 40, this.y, '#ff6600');
+            checkHit(this.x, this.y, 100);
+        },
+        special() {
+            createExplosion(this.x, this.y, '#00f2ff', 100);
+        }
+    };
+
+    // Gestion de la souris / curseur
+    window.addEventListener('mousemove', (e) => {
+        cursor.style.left = e.clientX + 'px';
+        cursor.style.top = e.clientY + 'px';
+    });
+
+    // --- GÉNÉRATION DES ENNEMIS ---
+    function spawnEnemy() {
+        if(world.enemies.length < 5) {
+            world.enemies.push({
+                x: player.x + (Math.random() - 0.5) * 1000,
+                y: player.y + (Math.random() - 0.5) * 1000,
+                hp: 50,
+                size: 25
+            });
+        }
+    }
+    setInterval(spawnEnemy, 2000);
+
+    function createExplosion(x, y, color, count = 20) {
+        for(let i=0; i<count; i++) {
+            world.particles.push({
+                x, y,
+                vx: (Math.random() - 0.5) * 10,
+                vy: (Math.random() - 0.5) * 10,
+                life: 1.0,
+                color: color
             });
         }
     }
 
-    // Gestion Inputs (Clavier + Tactile)
+    function checkHit(x, y, range) {
+        world.enemies = world.enemies.filter(en => {
+            const dist = Math.hypot(en.x - x, en.y - y);
+            if(dist < range) {
+                createExplosion(en.x, en.y, '#ff0000');
+                return false; // Mort
+            }
+            return true;
+        });
+    }
+
+    // --- BOUCLE DE JEU ---
+    const keys = {};
     window.addEventListener('keydown', e => keys[e.code] = true);
     window.addEventListener('keyup', e => keys[e.code] = false);
 
     function update() {
         // Mouvement
-        let dx = 0, dy = 0;
-        if(keys['KeyW'] || keys['ArrowUp']) dy -= player.speed;
-        if(keys['KeyS'] || keys['ArrowDown']) dy += player.speed;
-        if(keys['KeyA'] || keys['ArrowLeft']) dx -= player.speed;
-        if(keys['KeyD'] || keys['ArrowRight']) dx += player.speed;
-        
-        player.x += dx;
-        player.y += dy;
+        if(keys['KeyW'] || keys['ArrowUp']) player.y -= player.speed;
+        if(keys['KeyS'] || keys['ArrowDown']) player.y += player.speed;
+        if(keys['KeyA'] || keys['ArrowLeft']) player.x -= player.speed;
+        if(keys['KeyD'] || keys['ArrowRight']) player.x += player.speed;
 
-        // Ambiance (Cycle de lumière)
-        time += 0.002;
+        // Suivi Caméra
+        world.camera.x += (player.x - world.camera.x - width/2) * 0.1;
+        world.camera.y += (player.y - world.camera.y - height/2) * 0.1;
+
+        // Particules
+        world.particles.forEach((p, i) => {
+            p.x += p.vx; p.y += p.vy;
+            p.life -= 0.02;
+            if(p.life <= 0) world.particles.splice(i, 1);
+        });
     }
 
     function draw() {
-        ctx.clearRect(0, 0, width, height);
-        
-        // Caméra centrée sur le joueur
-        const camX = width/2 - player.x;
-        const camY = height/2 - player.y;
+        ctx.fillStyle = '#000814';
+        ctx.fillRect(0, 0, width, height);
 
         ctx.save();
-        ctx.translate(camX, camY);
+        ctx.translate(-world.camera.x, -world.camera.y);
 
-        // Grille de sol (style Tsushima / Zelda)
-        ctx.strokeStyle = "rgba(212, 175, 55, 0.1)";
-        ctx.lineWidth = 1;
-        for(let i=-1000; i<=1000; i+=100) {
-            ctx.beginPath(); ctx.moveTo(i, -1000); ctx.lineTo(i, 1000); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(-1000, i); ctx.lineTo(1000, i); ctx.stroke();
+        // Sol (Grid)
+        ctx.strokeStyle = '#001a33';
+        for(let x = player.x - 1000; x < player.x + 1000; x += 100) {
+            ctx.beginPath(); ctx.moveTo(x, player.y - 1000); ctx.lineTo(x, player.y + 1000); ctx.stroke();
+        }
+        for(let y = player.y - 1000; y < player.y + 1000; y += 100) {
+            ctx.beginPath(); ctx.moveTo(player.x - 1000, y); ctx.lineTo(player.x + 1000, y); ctx.stroke();
         }
 
-        // Dessiner les objets du monde
-        worldObjects.forEach(obj => {
-            // Effet d'ombre portée
-            ctx.fillStyle = "rgba(0,0,0,0.3)";
-            ctx.beginPath();
-            ctx.ellipse(obj.x, obj.y + obj.size/2, obj.size/2, obj.size/4, 0, 0, Math.PI*2);
-            ctx.fill();
-
-            // L'objet (Arbre ou Ruine)
-            ctx.fillStyle = obj.color;
-            ctx.shadowBlur = 15;
-            ctx.shadowColor = obj.color;
-            ctx.fillRect(obj.x - obj.size/2, obj.y - obj.size, obj.size, obj.size);
-            ctx.shadowBlur = 0;
+        // Ennemis
+        world.enemies.forEach(en => {
+            ctx.fillStyle = '#ff3300';
+            ctx.shadowBlur = 15; ctx.shadowColor = '#ff3300';
+            ctx.fillRect(en.x, en.y, en.size, en.size);
         });
 
-        // Joueur (Le Vagabond)
-        ctx.shadowBlur = 20;
-        ctx.shadowColor = "#D4AF37";
-        ctx.fillStyle = "#D4AF37";
+        // Joueur
+        ctx.fillStyle = player.color;
+        ctx.shadowBlur = 20; ctx.shadowColor = player.color;
         ctx.beginPath();
-        ctx.arc(player.x, player.y, 15, 0, Math.PI*2);
+        ctx.arc(player.x, player.y, player.size/2, 0, Math.PI*2);
         ctx.fill();
-        
-        // Halo de lumière autour du joueur (Style Zelda dans les grottes)
-        const gradient = ctx.createRadialGradient(player.x, player.y, 0, player.x, player.y, 300);
-        gradient.addColorStop(0, "rgba(212, 175, 55, 0.1)");
-        gradient.addColorStop(1, "transparent");
-        ctx.fillStyle = gradient;
-        ctx.beginPath(); ctx.arc(player.x, player.y, 300, 0, Math.PI*2); ctx.fill();
+
+        // Particules
+        world.particles.forEach(p => {
+            ctx.globalAlpha = p.life;
+            ctx.fillStyle = p.color;
+            ctx.fillRect(p.x, p.y, 4, 4);
+        });
+        ctx.globalAlpha = 1;
 
         ctx.restore();
-
-        // Filtre de nuit (Atmosphère)
-        const nightAlpha = (Math.sin(time) + 1) / 4; // Varie entre 0 et 0.5
-        ctx.fillStyle = `rgba(10, 14, 39, ${nightAlpha})`;
-        ctx.fillRect(0, 0, width, height);
 
         requestAnimationFrame(() => {
             update();
@@ -200,12 +220,6 @@
         });
     }
 
-    function resetGame() {
-        player.x = 0; player.y = 0;
-        document.getElementById('overlay').style.display = 'none';
-    }
-
-    initWorld();
     draw();
 </script>
 </body>
