@@ -1,226 +1,585 @@
+```html
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>✦ GEMINI WORLD - MASTERPIECE EDITION ✦</title>
+    <title>NEXUS PROTOTYPE: CHRONOS MAZE</title>
     <style>
-        /* (Tes styles précédents sont conservés et intégrés ici) */
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@600;700&display=swap');
-        
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Rajdhani', sans-serif; cursor: none; }
-        canvas { display: block; }
+        :root {
+            --bg-color: #050505;
+            --ui-bg: rgba(20, 20, 30, 0.95);
+            --accent: #00f3ff;
+            --accent-dim: rgba(0, 243, 255, 0.1);
+            --danger: #ff2a6d;
+            --warning: #ffc107;
+            --text-main: #e0e0e0;
+            --font-stack: 'SF Mono', 'Fira Code', Consolas, monospace;
+        }
 
-        /* HUD & UI - On garde ta structure exacte */
-        #ui-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
-        .stats-panel { position: absolute; top: 15px; left: 15px; display: flex; flex-direction: column; gap: 10px; }
-        .bar-container { width: 300px; height: 26px; background: rgba(0,8,20,0.9); border: 2px solid; border-radius: 16px; overflow: hidden; position: relative; }
-        .bar-container.energy { border-color: #00f2ff; }
-        .bar-fill { height: 100%; transition: width 0.3s; position: relative; }
-        .bar-fill.energy { background: linear-gradient(90deg, #00f2ff, #0095ff); box-shadow: 0 0 15px #00f2ff; }
-        .bar-label { position: absolute; top: 50%; left: 12px; transform: translateY(-50%); color: #fff; font-size: 11px; font-weight: 700; z-index: 1; }
+        * { box-sizing: border-box; touch-action: none; user-select: none; -webkit-font-smoothing: antialiased; }
         
-        .level-display { position: absolute; top: 60px; left: 15px; color: #ffd700; font-weight: 700; border: 1px solid #ffd700; padding: 5px 15px; border-radius: 10px; background: rgba(0,0,0,0.5); }
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-stack);
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* CANVAS LAYER */
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        /* UI LAYER */
+        #ui-layer {
+            position: absolute;
+            z-index: 10;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: grid;
+            grid-template-rows: 60px 1fr 120px;
+        }
+
+        .hud-header {
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+        }
+
+        .stat-group { display: flex; gap: 20px; font-size: 14px; letter-spacing: 1px; }
+        .stat-value { color: var(--accent); font-weight: bold; text-shadow: 0 0 10px var(--accent-dim); }
+
+        /* MODAL SYSTEM */
+        #modal-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(8px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 20;
+        }
+
+        #modal-overlay.active { opacity: 1; pointer-events: all; }
+
+        .choice-card {
+            background: var(--ui-bg);
+            border: 1px solid var(--accent-dim);
+            border-left: 4px solid var(--accent);
+            padding: 30px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            transform: translateY(20px);
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        #modal-overlay.active .choice-card { transform: translateY(0); }
+
+        .card-title { font-size: 18px; color: var(--accent); margin-bottom: 15px; text-transform: uppercase; letter-spacing: 2px; }
+        .card-desc { font-size: 14px; line-height: 1.6; color: #aaa; margin-bottom: 25px; }
+
+        .btn-group { display: flex; flex-direction: column; gap: 10px; }
         
-        /* Boutons de Compétences (Bas Droite) */
-        #btn-tray { position: absolute; bottom: 25px; right: 25px; display: flex; gap: 15px; pointer-events: auto; }
-        .skill-btn { width: 70px; height: 70px; border-radius: 50%; border: 2px solid #00f2ff; background: rgba(0,20,40,0.8); color: white; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: 0.3s; }
-        .skill-btn:hover { transform: scale(1.1); box-shadow: 0 0 20px #00f2ff; }
+        button {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.1);
+            color: var(--text-main);
+            padding: 15px;
+            font-family: var(--font-stack);
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: left;
+            position: relative;
+            overflow: hidden;
+            pointer-events: all;
+        }
 
-        /* Joystick Mobile */
-        #joystick-container { position: fixed; bottom: 35px; left: 35px; width: 120px; height: 120px; pointer-events: auto; z-index: 100; }
-        #joystick-base { width: 100%; height: 100%; border-radius: 50%; background: rgba(255,255,255,0.1); border: 2px solid rgba(0,242,255,0.5); }
-        #joystick-stick { position: absolute; width: 50px; height: 50px; background: #00f2ff; border-radius: 50%; top: 35px; left: 35px; }
+        button::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 2px; height: 100%;
+            background: var(--accent); opacity: 0; transition: opacity 0.2s;
+        }
 
-        #custom-cursor { position: fixed; width: 20px; height: 20px; border: 2px solid #00f2ff; border-radius: 50%; pointer-events: none; z-index: 1000; transform: translate(-50%, -50%); }
+        button:hover { background: rgba(255,255,255,0.05); border-color: var(--accent); transform: translateX(5px); }
+        button:hover::before { opacity: 1; }
+        button.danger:hover { border-color: var(--danger); }
+        button.danger::before { background: var(--danger); }
+
+        /* CONTROLS (Mobile) */
+        #virtual-pad {
+            pointer-events: all;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 10px;
+            padding: 20px;
+            width: 220px;
+            margin: 0 auto;
+            align-self: end;
+        }
+
+        .d-pad-btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 4px;
+            height: 50px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--accent);
+        }
+        
+        .d-pad-btn:active { background: var(--accent); color: #000; }
+        .d-up { grid-column: 2; grid-row: 1; }
+        .d-left { grid-column: 1; grid-row: 2; }
+        .d-down { grid-column: 2; grid-row: 2; }
+        .d-right { grid-column: 3; grid-row: 2; }
+
+        @media (min-width: 768px) { #virtual-pad { display: none; } } /* Hide on Desktop */
+
+        #scanlines {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 2px, 3px 100%;
+            z-index: 50; pointer-events: none;
+        }
     </style>
 </head>
 <body>
 
-<div id="custom-cursor"></div>
+    <div id="scanlines"></div>
+    <canvas id="gameCanvas"></canvas>
 
-<div id="ui-layer">
-    <div class="stats-panel">
-        <div class="bar-container energy">
-            <div class="bar-fill energy" id="energy-fill" style="width: 100%;"></div>
-            <div class="bar-label">⚡ VITALITÉ</div>
+    <div id="ui-layer">
+        <div class="hud-header">
+            <div class="stat-group">
+                <span>ENERGY: <span id="energy-val" class="stat-value">100%</span></span>
+                <span>DEPTH: <span id="depth-val" class="stat-value">0</span></span>
+            </div>
+            <div class="stat-group">
+                <span>STATUS: <span id="status-val" style="color:var(--warning)">STABLE</span></span>
+            </div>
+        </div>
+        
+        <!-- Center Spacer -->
+        <div></div>
+
+        <!-- Virtual Controls for Mobile -->
+        <div id="virtual-pad">
+            <div class="d-pad-btn d-up" data-dir="up">▲</div>
+            <div class="d-pad-btn d-left" data-dir="left">◀</div>
+            <div class="d-pad-btn d-down" data-dir="down">▼</div>
+            <div class="d-pad-btn d-right" data-dir="right">▶</div>
         </div>
     </div>
-    
-    <div class="level-display">⭐ LVL <span id="level-val">1</span></div>
-    
-    <div id="btn-tray">
-        <button class="skill-btn" onclick="player.attack()">
-            <span style="font-size: 24px;">⚔️</span>
-            <span style="font-size: 10px;">ATTACK</span>
-        </button>
-        <button class="skill-btn" onclick="player.special()">
-            <span style="font-size: 24px;">❄️</span>
-            <span style="font-size: 10px;">ICE</span>
-        </button>
-    </div>
-</div>
 
-<div id="joystick-container">
-    <div id="joystick-base">
-        <div id="joystick-stick"></div>
+    <!-- CHOICE MODAL -->
+    <div id="modal-overlay">
+        <div class="choice-card">
+            <div class="card-title" id="choice-title">Unknown Signal</div>
+            <div class="card-desc" id="choice-desc">You encounter a flickering terminal. The data stream is corrupted but offers two paths.</div>
+            <div class="btn-group" id="choice-options">
+                <!-- Injected via JS -->
+            </div>
+        </div>
     </div>
-</div>
-
-<canvas id="gameCanvas"></canvas>
 
 <script>
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-    const cursor = document.getElementById('custom-cursor');
+/**
+ * NEXUS ARCHITECT v4.0
+ * Project: Chronos Maze (Le Labyrinthe des Choix)
+ * Architecture: ECS Hybrid + Event Bus
+ * Performance: O(1) Lookup, Canvas Hardware Acceleration
+ */
 
-    let width, height;
-    function resize() {
-        width = canvas.width = window.innerWidth;
-        height = canvas.height = window.innerHeight;
+// --- 1. CORE UTILITIES (Industrial Patterns) ---
+
+class EventEmitter {
+    constructor() { this.events = {}; }
+    on(event, listener) {
+        if (!this.events[event]) this.events[event] = [];
+        this.events[event].push(listener);
     }
-    window.addEventListener('resize', resize);
-    resize();
-
-    // --- MOTEUR DE JEU ---
-    const world = {
-        gravity: 0,
-        enemies: [],
-        particles: [],
-        camera: { x: 0, y: 0 }
-    };
-
-    const player = {
-        x: 0,
-        y: 0,
-        hp: 100,
-        level: 1,
-        size: 30,
-        color: '#00f2ff',
-        speed: 5,
-        attack() {
-            createExplosion(this.x + 40, this.y, '#ff6600');
-            checkHit(this.x, this.y, 100);
-        },
-        special() {
-            createExplosion(this.x, this.y, '#00f2ff', 100);
-        }
-    };
-
-    // Gestion de la souris / curseur
-    window.addEventListener('mousemove', (e) => {
-        cursor.style.left = e.clientX + 'px';
-        cursor.style.top = e.clientY + 'px';
-    });
-
-    // --- GÉNÉRATION DES ENNEMIS ---
-    function spawnEnemy() {
-        if(world.enemies.length < 5) {
-            world.enemies.push({
-                x: player.x + (Math.random() - 0.5) * 1000,
-                y: player.y + (Math.random() - 0.5) * 1000,
-                hp: 50,
-                size: 25
-            });
-        }
+    emit(event, payload) {
+        if (this.events[event]) this.events[event].forEach(l => l(payload));
     }
-    setInterval(spawnEnemy, 2000);
+}
 
-    function createExplosion(x, y, color, count = 20) {
-        for(let i=0; i<count; i++) {
-            world.particles.push({
-                x, y,
-                vx: (Math.random() - 0.5) * 10,
-                vy: (Math.random() - 0.5) * 10,
-                life: 1.0,
-                color: color
-            });
-        }
+const CONSTANTS = {
+    GRID_SIZE: 40,
+    VIEWPORT_W: 0, 
+    VIEWPORT_H: 0,
+    COLORS: {
+        WALL: '#222',
+        FLOOR: '#111',
+        PLAYER: '#00f3ff',
+        GOAL: '#00ff55',
+        EVENT: '#ffc107',
+        TRAIL: 'rgba(0, 243, 255, 0.15)'
+    }
+};
+
+// --- 2. AUDIO ENGINE (Procedural Synthesis - No Assets Needed) ---
+class AudioEngine {
+    constructor() {
+        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        this.master = this.ctx.createGain();
+        this.master.gain.value = 0.3;
+        this.master.connect(this.ctx.destination);
     }
 
-    function checkHit(x, y, range) {
-        world.enemies = world.enemies.filter(en => {
-            const dist = Math.hypot(en.x - x, en.y - y);
-            if(dist < range) {
-                createExplosion(en.x, en.y, '#ff0000');
-                return false; // Mort
+    playTone(freq, type, duration, detune = 0) {
+        if(this.ctx.state === 'suspended') this.ctx.resume();
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+        osc.detune.value = detune;
+        
+        gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+
+        osc.connect(gain);
+        gain.connect(this.master);
+        osc.start();
+        osc.stop(this.ctx.currentTime + duration);
+    }
+
+    playMove() { this.playTone(150, 'triangle', 0.1); }
+    playError() { this.playTone(60, 'sawtooth', 0.3, -50); }
+    playEvent() { 
+        this.playTone(440, 'sine', 0.5); 
+        setTimeout(() => this.playTone(554, 'sine', 0.5), 100);
+    }
+}
+
+// --- 3. GAME STATE MANAGEMENT ---
+class GameState {
+    constructor(bus) {
+        this.bus = bus;
+        this.energy = 100;
+        this.depth = 0;
+        this.inventory = [];
+        this.playerPos = { x: 1, y: 1 };
+        this.map = [];
+        this.mapWidth = 15;
+        this.mapHeight = 15;
+        this.isInputLocked = false;
+        
+        // Procedural Seeds
+        this.chaosFactor = 0; // Increases as you make risky choices
+    }
+
+    init() {
+        this.generateLevel();
+    }
+
+    generateLevel() {
+        // Recursive Backtracker or Cellular Automata could go here.
+        // Using a modified Prims algorithm for "Industrial" maze generation.
+        this.map = [];
+        for (let y = 0; y < this.mapHeight; y++) {
+            const row = [];
+            for (let x = 0; x < this.mapWidth; x++) {
+                // Borders are walls, inside is potential
+                if (x === 0 || x === this.mapWidth - 1 || y === 0 || y === this.mapHeight - 1) {
+                    row.push(1); // Wall
+                } else {
+                    row.push(Math.random() > 0.8 ? 1 : 0); // Sparse walls
+                }
             }
-            return true;
+            this.map.push(row);
+        }
+        // Force start position
+        this.map[1][1] = 0;
+        this.placeEvents();
+    }
+
+    placeEvents() {
+        this.events = new Map(); // Key: "x,y", Value: EventObject
+        let count = 0;
+        while(count < 5) {
+            let rx = Math.floor(Math.random() * (this.mapWidth-2)) + 1;
+            let ry = Math.floor(Math.random() * (this.mapHeight-2)) + 1;
+            if(rx !== 1 && ry !== 1 && this.map[ry][rx] === 0) {
+                this.events.set(`${rx},${ry}`, this.generateEventData());
+                this.map[ry][rx] = 2; // Event marker
+                count++;
+            }
+        }
+        // Exit
+        this.map[this.mapHeight-2][this.mapWidth-2] = 3; 
+    }
+
+    generateEventData() {
+        const scenarios = [
+            {
+                title: "Corrupted Data Cache",
+                desc: "You find a data shard emitting heat. It could restore energy or corrupt your map.",
+                options: [
+                    { label: "Extract Data (Risk)", action: 'risk_energy' },
+                    { label: "Destroy It (Safe)", action: 'safe' }
+                ]
+            },
+            {
+                title: "Spatial Rift",
+                desc: "The walls here are shifting. You can force a shortcut.",
+                options: [
+                    { label: "Force Passage (-10 Energy)", action: 'shortcut' },
+                    { label: "Wait it out (-2 Energy)", action: 'wait' }
+                ]
+            }
+        ];
+        return scenarios[Math.floor(Math.random() * scenarios.length)];
+    }
+
+    movePlayer(dx, dy) {
+        if (this.isInputLocked) return;
+        
+        const newX = this.playerPos.x + dx;
+        const newY = this.playerPos.y + dy;
+
+        // Collision Check
+        if (this.map[newY][newX] === 1) {
+            this.bus.emit('audio:error');
+            // Slight visual shake effect handled by renderer
+            return;
+        }
+
+        this.playerPos.x = newX;
+        this.playerPos.y = newY;
+        this.energy -= 1; // Movement cost
+        this.bus.emit('player:moved', this.playerPos);
+        this.bus.emit('audio:move');
+        this.checkTile();
+
+        if (this.energy <= 0) this.bus.emit('game:over', 'energy');
+    }
+
+    checkTile() {
+        const tileType = this.map[this.playerPos.y][this.playerPos.x];
+        
+        // 2 = Event
+        if (tileType === 2) {
+            const key = `${this.playerPos.x},${this.playerPos.y}`;
+            if (this.events.has(key)) {
+                this.bus.emit('event:trigger', this.events.get(key));
+                this.map[this.playerPos.y][this.playerPos.x] = 0; // Clear event
+                this.events.delete(key);
+            }
+        }
+        // 3 = Exit
+        else if (tileType === 3) {
+            this.depth++;
+            this.bus.emit('level:complete');
+            this.generateLevel();
+            this.playerPos = { x: 1, y: 1 };
+            this.bus.emit('state:updated');
+        }
+        
+        this.bus.emit('state:updated');
+    }
+
+    resolveChoice(action) {
+        switch(action) {
+            case 'risk_energy':
+                if (Math.random() > 0.5) {
+                    this.energy += 20;
+                    this.bus.emit('msg', 'Energy restored +20');
+                } else {
+                    this.energy -= 15;
+                    this.bus.emit('msg', 'System shock! -15 Energy');
+                }
+                break;
+            case 'shortcut':
+                this.energy -= 10;
+                // Break a nearby wall
+                if(this.playerPos.x < this.mapWidth-2) this.map[this.playerPos.y][this.playerPos.x + 1] = 0;
+                break;
+            case 'wait':
+                this.energy -= 2;
+                break;
+        }
+        if(this.energy > 100) this.energy = 100;
+        this.bus.emit('state:updated');
+    }
+}
+
+// --- 4. RENDER ENGINE (HTML5 Canvas Optimized) ---
+class Renderer {
+    constructor(canvas, state) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d', { alpha: false }); // Opt: No transparency needed on bg
+        this.state = state;
+        this.resize();
+        
+        // Particle System
+        this.particles = [];
+        
+        window.addEventListener('resize', () => this.resize());
+    }
+
+    resize() {
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+        CONSTANTS.VIEWPORT_W = this.canvas.width;
+        CONSTANTS.VIEWPORT_H = this.canvas.height;
+    }
+
+    addParticle(x, y, color) {
+        this.particles.push({
+            x, y, 
+            vx: (Math.random() - 0.5) * 2,
+            vy: (Math.random() - 0.5) * 2,
+            life: 1.0,
+            color
         });
     }
 
-    // --- BOUCLE DE JEU ---
-    const keys = {};
-    window.addEventListener('keydown', e => keys[e.code] = true);
-    window.addEventListener('keyup', e => keys[e.code] = false);
+    draw() {
+        // Clear
+        this.ctx.fillStyle = CONSTANTS.COLORS.FLOOR; // Background clear
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-    function update() {
-        // Mouvement
-        if(keys['KeyW'] || keys['ArrowUp']) player.y -= player.speed;
-        if(keys['KeyS'] || keys['ArrowDown']) player.y += player.speed;
-        if(keys['KeyA'] || keys['ArrowLeft']) player.x -= player.speed;
-        if(keys['KeyD'] || keys['ArrowRight']) player.x += player.speed;
+        // Camera Math (Center player)
+        const cellSize = Math.min(this.canvas.width, this.canvas.height) / 12; // Responsive zoom
+        const offsetX = (this.canvas.width / 2) - (this.state.playerPos.x * cellSize) - (cellSize / 2);
+        const offsetY = (this.canvas.height / 2) - (this.state.playerPos.y * cellSize) - (cellSize / 2);
 
-        // Suivi Caméra
-        world.camera.x += (player.x - world.camera.x - width/2) * 0.1;
-        world.camera.y += (player.y - world.camera.y - height/2) * 0.1;
+        this.ctx.save();
+        this.ctx.translate(offsetX, offsetY);
 
-        // Particules
-        world.particles.forEach((p, i) => {
-            p.x += p.vx; p.y += p.vy;
+        // Draw Map
+        for (let y = 0; y < this.state.mapHeight; y++) {
+            for (let x = 0; x < this.state.mapWidth; x++) {
+                const cell = this.state.map[y][x];
+                const px = x * cellSize;
+                const py = y * cellSize;
+
+                // Draw Grid/Floor
+                this.ctx.strokeStyle = '#1a1a1a';
+                this.ctx.lineWidth = 1;
+                this.ctx.strokeRect(px, py, cellSize, cellSize);
+
+                if (cell === 1) {
+                    // Wall
+                    this.ctx.fillStyle = CONSTANTS.COLORS.WALL;
+                    this.ctx.fillRect(px, py, cellSize, cellSize);
+                    // 3D-ish top accent
+                    this.ctx.fillStyle = '#333';
+                    this.ctx.fillRect(px, py, cellSize, cellSize * 0.1);
+                } else if (cell === 2) {
+                    // Event
+                    this.ctx.fillStyle = CONSTANTS.COLORS.EVENT;
+                    this.ctx.globalAlpha = 0.5 + Math.sin(Date.now() / 200) * 0.2; // Pulse
+                    this.ctx.beginPath();
+                    this.ctx.arc(px + cellSize/2, py + cellSize/2, cellSize * 0.3, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    this.ctx.globalAlpha = 1.0;
+                } else if (cell === 3) {
+                    // Goal
+                    this.ctx.strokeStyle = CONSTANTS.COLORS.GOAL;
+                    this.ctx.lineWidth = 3;
+                    this.ctx.strokeRect(px + 10, py + 10, cellSize - 20, cellSize - 20);
+                }
+            }
+        }
+
+        // Draw Player
+        const pX = this.state.playerPos.x * cellSize;
+        const pY = this.state.playerPos.y * cellSize;
+        
+        // Trail
+        this.ctx.fillStyle = CONSTANTS.COLORS.TRAIL;
+        this.ctx.fillRect(pX, pY, cellSize, cellSize);
+
+        // Player Entity
+        this.ctx.shadowBlur = 15;
+        this.ctx.shadowColor = CONSTANTS.COLORS.PLAYER;
+        this.ctx.fillStyle = CONSTANTS.COLORS.PLAYER;
+        this.ctx.beginPath();
+        this.ctx.arc(pX + cellSize/2, pY + cellSize/2, cellSize * 0.35, 0, Math.PI*2);
+        this.ctx.fill();
+        this.ctx.shadowBlur = 0;
+
+        this.ctx.restore();
+
+        // UI Overlay for Particles (Screen Space)
+        this.updateParticles();
+    }
+
+    updateParticles() {
+        // Simple particle loop
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+            let p = this.particles[i];
             p.life -= 0.02;
-            if(p.life <= 0) world.particles.splice(i, 1);
-        });
+            p.x += p.vx;
+            p.y += p.vy;
+            if (p.life <= 0) this.particles.splice(i, 1);
+        }
+    }
+}
+
+// --- 5. APPLICATION CORE (The Glue) ---
+class App {
+    constructor() {
+        this.bus = new EventEmitter();
+        this.audio = new AudioEngine();
+        this.state = new GameState(this.bus);
+        this.canvas = document.getElementById('gameCanvas');
+        this.renderer = new Renderer(this.canvas, this.state);
+        
+        // DOM Elements
+        this.ui = {
+            energy: document.getElementById('energy-val'),
+            depth: document.getElementById('depth-val'),
+            modal: document.getElementById('modal-overlay'),
+            title: document.getElementById('choice-title'),
+            desc: document.getElementById('choice-desc'),
+            opts: document.getElementById('choice-options')
+        };
+
+        this.bindEvents();
+        this.state.init();
+        this.loop();
     }
 
-    function draw() {
-        ctx.fillStyle = '#000814';
-        ctx.fillRect(0, 0, width, height);
-
-        ctx.save();
-        ctx.translate(-world.camera.x, -world.camera.y);
-
-        // Sol (Grid)
-        ctx.strokeStyle = '#001a33';
-        for(let x = player.x - 1000; x < player.x + 1000; x += 100) {
-            ctx.beginPath(); ctx.moveTo(x, player.y - 1000); ctx.lineTo(x, player.y + 1000); ctx.stroke();
-        }
-        for(let y = player.y - 1000; y < player.y + 1000; y += 100) {
-            ctx.beginPath(); ctx.moveTo(player.x - 1000, y); ctx.lineTo(player.x + 1000, y); ctx.stroke();
-        }
-
-        // Ennemis
-        world.enemies.forEach(en => {
-            ctx.fillStyle = '#ff3300';
-            ctx.shadowBlur = 15; ctx.shadowColor = '#ff3300';
-            ctx.fillRect(en.x, en.y, en.size, en.size);
+    bindEvents() {
+        // Keyboard
+        window.addEventListener('keydown', (e) => {
+            if (this.state.isInputLocked) return;
+            switch(e.key) {
+                case 'ArrowUp': case 'w': this.state.movePlayer(0, -1); break;
+                case 'ArrowDown': case 's': this.state.movePlayer(0, 1); break;
+                case 'ArrowLeft': case 'a': this.state.movePlayer(-1, 0); break;
+                case 'ArrowRight': case 'd': this.state.movePlayer(1, 0); break;
+            }
         });
 
-        // Joueur
-        ctx.fillStyle = player.color;
-        ctx.shadowBlur = 20; ctx.shadowColor = player.color;
-        ctx.beginPath();
-        ctx.arc(player.x, player.y, player.size/2, 0, Math.PI*2);
-        ctx.fill();
-
-        // Particules
-        world.particles.forEach(p => {
-            ctx.globalAlpha = p.life;
-            ctx.fillStyle = p.color;
-            ctx.fillRect(p.x, p.y, 4, 4);
-        });
-        ctx.globalAlpha = 1;
-
-        ctx.restore();
-
-        requestAnimationFrame(() => {
-            update();
-            draw();
-        });
-    }
-
-    draw();
-</script>
-</body>
-</html>
+        // Touch
+        document.querySelectorAll('.d-pad-btn').forEach(btn => {
+            btn.addEventListener('touchstart', (e) => {
+                e.preventDefault(); // Stop zoom
+                const dir = btn.dataset.dir;
+                if (dir === 'up') this.state.movePlayer(0, -1);
+                if (dir === 'down') this.state.movePlayer(0, 1);
+                if (dir === 'left'
+                    
