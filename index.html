@@ -1,356 +1,483 @@
+```html
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NEXUS PROTOTYPE: CHRONOS MAZE</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+    <title>FRACTURE DU TEMPS | Mobile Build v1.0</title>
     <style>
-        :root {
-            --bg-color: #050505;
-            --ui-bg: rgba(20, 20, 30, 0.95);
-            --accent: #00f3ff;
-            --accent-dim: rgba(0, 243, 255, 0.1);
-            --danger: #ff2a6d;
-            --warning: #ffc107;
-            --text-main: #e0e0e0;
-            --font-stack: 'SF Mono', 'Fira Code', Consolas, monospace;
-        }
-
-        /* OPTIMIZATION: Removed universal selector abuse */
-        html, body {
-            margin: 0; padding: 0; height: 100vh; overflow: hidden;
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            font-family: var(--font-stack);
-            touch-action: none; /* Disables zoom/scroll explicitly on container */
-            user-select: none;
-            -webkit-font-smoothing: antialiased;
-        }
-
-        *, *::before, *::after { box-sizing: border-box; }
-
-        canvas {
-            position: absolute; top: 0; left: 0; z-index: 1;
-            /* OPTIMIZATION: Force GPU layer */
-            will-change: transform;
-        }
-
-        #ui-layer {
-            position: absolute; z-index: 10; width: 100%; height: 100%;
-            pointer-events: none;
-            display: grid; grid-template-rows: 60px 1fr 120px;
-        }
-
-        .hud-header {
-            padding: 20px;
-            display: flex; justify-content: space-between; align-items: center;
-            background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
-        }
-
-        .stat-group { display: flex; gap: 20px; font-size: 14px; letter-spacing: 1px; }
-        .stat-value { color: var(--accent); font-weight: bold; text-shadow: 0 0 10px var(--accent-dim); }
-
-        #modal-overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);
-            display: flex; justify-content: center; align-items: center;
-            opacity: 0; pointer-events: none;
-            transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            z-index: 20;
-        }
-        #modal-overlay.active { opacity: 1; pointer-events: all; }
-
-        .choice-card {
-            background: var(--ui-bg);
-            border: 1px solid var(--accent-dim); border-left: 4px solid var(--accent);
-            padding: 30px; width: 90%; max-width: 500px;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-            transform: translateY(20px); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        #modal-overlay.active .choice-card { transform: translateY(0); }
-
-        .card-title { font-size: 18px; color: var(--accent); margin-bottom: 15px; text-transform: uppercase; letter-spacing: 2px; }
-        .card-desc { font-size: 14px; line-height: 1.6; color: #aaa; margin-bottom: 25px; }
-        .btn-group { display: flex; flex-direction: column; gap: 10px; }
+        /* INDUSTRIAL UI RESET */
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-user-select: none; touch-action: none; }
+        body { background-color: #050508; overflow: hidden; font-family: 'Courier New', monospace; color: #00f3ff; }
+        #render-target { width: 100vw; height: 100vh; display: block; }
         
-        button {
-            background: transparent; border: 1px solid rgba(255,255,255,0.1);
-            color: var(--text-main); padding: 15px; font-family: var(--font-stack);
-            font-size: 14px; cursor: pointer; transition: all 0.2s ease;
-            text-align: left; position: relative; overflow: hidden; pointer-events: all;
-        }
-        button::before {
-            content: ''; position: absolute; top: 0; left: 0; width: 2px; height: 100%;
-            background: var(--accent); opacity: 0; transition: opacity 0.2s;
-        }
-        button:hover { background: rgba(255,255,255,0.05); border-color: var(--accent); transform: translateX(5px); }
-        button:hover::before { opacity: 1; }
-
-        #virtual-pad {
-            pointer-events: all; display: grid;
-            grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr);
-            gap: 10px; padding: 20px; width: 220px; margin: 0 auto; align-self: end;
-        }
-        .d-pad-btn {
-            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 4px; height: 50px; display: flex;
-            justify-content: center; align-items: center; color: var(--accent);
-        }
-        .d-pad-btn:active { background: var(--accent); color: #000; }
-        .d-up { grid-column: 2; grid-row: 1; }
-        .d-left { grid-column: 1; grid-row: 2; }
-        .d-down { grid-column: 2; grid-row: 2; }
-        .d-right { grid-column: 3; grid-row: 2; }
-
-        @media (min-width: 768px) { #virtual-pad { display: none; } }
-
-        #scanlines {
+        /* LOADING OVERLAY */
+        #loader {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            /* OPTIMIZATION: Reduced paint complexity */
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
-            background-size: 100% 4px;
-            z-index: 50; pointer-events: none;
+            background: #000; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; z-index: 9999;
+            transition: opacity 0.5s ease;
         }
+        .spinner {
+            width: 50px; height: 50px; border: 3px solid #111;
+            border-top: 3px solid #00f3ff; border-radius: 50%;
+            animation: spin 1s linear infinite; margin-bottom: 20px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .log-text { font-size: 12px; opacity: 0.7; letter-spacing: 1px; }
     </style>
+    <!-- PHASER 3 ENGINE (Industrial Standard for Web 2D) -->
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
 </head>
 <body>
-    <div id="scanlines"></div>
-    <canvas id="gameCanvas"></canvas>
-    <div id="ui-layer">
-        <div class="hud-header">
-            <div class="stat-group">
-                <span>ENERGY: <span id="energy-val" class="stat-value">100%</span></span>
-                <span>DEPTH: <span id="depth-val" class="stat-value">0</span></span>
-            </div>
-            <div class="stat-group"><span>STATUS: <span id="status-val" style="color:var(--warning)">STABLE</span></span></div>
-        </div>
-        <div></div>
-        <div id="virtual-pad">
-            <div class="d-pad-btn d-up" data-dir="up">▲</div>
-            <div class="d-pad-btn d-left" data-dir="left">◀</div>
-            <div class="d-pad-btn d-down" data-dir="down">▼</div>
-            <div class="d-pad-btn d-right" data-dir="right">▶</div>
-        </div>
-    </div>
-    <div id="modal-overlay">
-        <div class="choice-card">
-            <div class="card-title" id="choice-title"></div>
-            <div class="card-desc" id="choice-desc"></div>
-            <div class="btn-group" id="choice-options"></div>
-        </div>
-    </div>
+
+<div id="loader">
+    <div class="spinner"></div>
+    <div class="log-text">INITIALIZING CHRONOS ENGINE...</div>
+</div>
+
+<div id="render-target"></div>
 
 <script>
-class EventEmitter {
-    constructor() { this.events = {}; }
-    on(event, listener) { (this.events[event] = this.events[event] || []).push(listener); }
-    emit(event, payload) { if (this.events[event]) this.events[event].forEach(l => l(payload)); }
-}
+/**
+ * NEXUS ARCHITECT v4.0 - INDUSTRIAL GRADE GAME SCRIPT
+ * PROJECT: FRACTURE DU TEMPS (Mobile Optimized)
+ * ARCHITECTURE: ECS Pattern, Singleton Managers, WebGL Shaders
+ */
+
+// ==========================================
+// 1. CORE UTILITIES & CONFIGURATION
+// ==========================================
 
 const CONSTANTS = {
-    GRID_SIZE: 40,
-    COLORS: { WALL: '#222', FLOOR: '#111', PLAYER: '#00f3ff', GOAL: '#00ff55', EVENT: '#ffc107', TRAIL: 'rgba(0, 243, 255, 0.15)' }
+    GRAVITY: 1200,
+    PLAYER_SPEED: 260,
+    JUMP_FORCE: -550,
+    TIME_SLOW_FACTOR: 0.2,
+    INSTABILITY_MAX: 100,
+    COLORS: {
+        BG: 0x050508,
+        PLAYER: 0x00f3ff,
+        DANGER: 0xff0055,
+        GROUND: 0x1a1a24,
+        TIME_FX: 0xcc00ff
+    },
+    STORAGE_KEY: 'FRACTURE_DATA_V1'
 };
 
-class GameState {
-    constructor(bus) {
-        this.bus = bus;
-        this.energy = 100;
-        this.depth = 0;
-        this.playerPos = { x: 1, y: 1 };
-        this.map = [];
-        this.mapWidth = 15;
-        this.mapHeight = 15;
-        this.isInputLocked = false;
-        this.events = new Map();
+// Singleton for Save Management (Enterprise Persistence)
+class SaveSystem {
+    static save(data) {
+        try {
+            const payload = btoa(JSON.stringify(data)); // Basic Obfuscation
+            localStorage.setItem(CONSTANTS.STORAGE_KEY, payload);
+            console.log('[SYS] Progress Saved.');
+        } catch (e) { console.error('[SYS] Save Failed', e); }
     }
 
-    init() { this.generateLevel(); }
-
-    generateLevel() {
-        this.map = [];
-        for (let y = 0; y < this.mapHeight; y++) {
-            const row = [];
-            for (let x = 0; x < this.mapWidth; x++) {
-                if (x === 0 || x === this.mapWidth - 1 || y === 0 || y === this.mapHeight - 1) row.push(1);
-                else row.push(Math.random() > 0.8 ? 1 : 0);
-            }
-            this.map.push(row);
-        }
-        this.map[1][1] = 0;
-        this.placeEvents();
-        this.bus.emit('level:generated'); // Trigger for cached render
-    }
-
-    placeEvents() {
-        this.events.clear();
-        let count = 0;
-        while(count < 5) {
-            let rx = Math.floor(Math.random() * (this.mapWidth-2)) + 1;
-            let ry = Math.floor(Math.random() * (this.mapHeight-2)) + 1;
-            // OPTIMIZATION: Integer key instead of string
-            let key = ry * this.mapWidth + rx;
-            if(rx !== 1 && ry !== 1 && this.map[ry][rx] === 0) {
-                this.events.set(key, { title: "Data Node", desc: "Recover data?", options: [] });
-                this.map[ry][rx] = 2;
-                count++;
-            }
-        }
-        this.map[this.mapHeight-2][this.mapWidth-2] = 3;
-    }
-
-    movePlayer(dx, dy) {
-        if (this.isInputLocked) return;
-        const newX = this.playerPos.x + dx;
-        const newY = this.playerPos.y + dy;
-
-        if (this.map[newY][newX] === 1) return;
-
-        this.playerPos.x = newX;
-        this.playerPos.y = newY;
-        this.energy -= 1;
-        this.bus.emit('player:moved', this.playerPos);
-        
-        // OPTIMIZATION: Check event with integer key
-        const key = newY * this.mapWidth + newX;
-        const tile = this.map[newY][newX];
-
-        if (tile === 2 && this.events.has(key)) {
-             // Simple alert for demo, real modal logic would go here
-             console.log("Event Triggered");
-             this.map[newY][newX] = 0;
-             this.events.delete(key);
-             this.bus.emit('level:generated'); // Re-cache map because tile changed
-        } else if (tile === 3) {
-            this.depth++;
-            this.generateLevel();
-            this.playerPos = { x: 1, y: 1 };
-        }
+    static load() {
+        try {
+            const raw = localStorage.getItem(CONSTANTS.STORAGE_KEY);
+            return raw ? JSON.parse(atob(raw)) : null;
+        } catch (e) { return null; }
     }
 }
 
-class Renderer {
-    constructor(canvas, state) {
-        this.canvas = canvas;
-        this.ctx = canvas.getContext('2d', { alpha: false });
-        this.state = state;
-        // OPTIMIZATION: Offscreen canvas for static map
-        this.mapCanvas = document.createElement('canvas');
-        this.mapCtx = this.mapCanvas.getContext('2d');
-        this.resize();
-        window.addEventListener('resize', () => this.resize());
-        
-        // Listen for map changes to re-render the static part
-        this.state.bus.on('level:generated', () => this.cacheMap());
+// Custom WebGL Shader for Time Distortion (Glitch Effect)
+const TimeDistortionShader = `
+precision mediump float;
+uniform sampler2D uMainSampler;
+uniform vec2 uResolution;
+uniform float uTime;
+uniform float uInstability; // 0.0 to 1.0
+
+varying vec2 outTexCoord;
+
+float rand(vec2 co){
+    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+}
+
+void main() {
+    vec2 uv = outTexCoord;
+    
+    // Chromatic Aberration based on Instability
+    float shift = uInstability * 0.02;
+    float r = texture2D(uMainSampler, uv + vec2(shift, 0.0)).r;
+    float g = texture2D(uMainSampler, uv).g;
+    float b = texture2D(uMainSampler, uv - vec2(shift, 0.0)).b;
+    
+    // Horizontal Glitch Slice
+    if(uInstability > 0.3) {
+        float noise = rand(vec2(0.0, floor(uv.y * 50.0) + uTime));
+        if (noise < uInstability * 0.1) {
+            uv.x += (rand(vec2(uTime)) - 0.5) * 0.1;
+            r = texture2D(uMainSampler, uv).r;
+            g = texture2D(uMainSampler, uv).g;
+            b = texture2D(uMainSampler, uv).b;
+        }
     }
 
-    resize() {
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight;
-        this.cacheMap();
+    // Scanlines
+    float scanline = sin(uv.y * 800.0) * 0.04;
+    
+    gl_FragColor = vec4(r, g, b, 1.0) - scanline;
+}
+`;
+
+// ==========================================
+// 2. GAME SCENES
+// ==========================================
+
+class BootScene extends Phaser.Scene {
+    constructor() { super({ key: 'BootScene' }); }
+
+    preload() {
+        // Procedural Texture Generation (No external assets dependencies)
+        const gfx = this.make.graphics({x:0, y:0, add: false});
+        
+        // Player Texture
+        gfx.fillStyle(CONSTANTS.COLORS.PLAYER, 1);
+        gfx.fillRect(0, 0, 32, 32);
+        gfx.generateTexture('player', 32, 32);
+        
+        // Ground Texture
+        gfx.clear();
+        gfx.fillStyle(CONSTANTS.COLORS.GROUND, 1);
+        gfx.lineStyle(2, 0x333344, 1);
+        gfx.fillRect(0, 0, 64, 64);
+        gfx.strokeRect(0, 0, 64, 64);
+        gfx.generateTexture('ground', 64, 64);
+
+        // Danger Texture
+        gfx.clear();
+        gfx.fillStyle(CONSTANTS.COLORS.DANGER, 1);
+        gfx.fillTriangle(16, 0, 32, 32, 0, 32);
+        gfx.generateTexture('spike', 32, 32);
+
+        // Particle Texture
+        gfx.clear();
+        gfx.fillStyle(CONSTANTS.COLORS.TIME_FX, 1);
+        gfx.fillCircle(4, 4, 4);
+        gfx.generateTexture('particle', 8, 8);
     }
 
-    // OPTIMIZATION: Draw map once, only when it changes
-    cacheMap() {
-        const cellSize = Math.min(this.canvas.width, this.canvas.height) / 12;
-        this.mapCanvas.width = this.state.mapWidth * cellSize;
-        this.mapCanvas.height = this.state.mapHeight * cellSize;
-        
-        const ctx = this.mapCtx;
-        ctx.clearRect(0,0,this.mapCanvas.width, this.mapCanvas.height);
-        
-        for (let y = 0; y < this.state.mapHeight; y++) {
-            for (let x = 0; x < this.state.mapWidth; x++) {
-                const cell = this.state.map[y][x];
-                const px = x * cellSize;
-                const py = y * cellSize;
+    create() {
+        document.getElementById('loader').style.opacity = '0';
+        setTimeout(() => {
+            document.getElementById('loader').remove();
+            this.scene.start('GameScene');
+            this.scene.start('UIScene'); // Parallel UI Scene
+        }, 500);
+    }
+}
 
-                ctx.fillStyle = (cell === 1) ? CONSTANTS.COLORS.WALL : CONSTANTS.COLORS.FLOOR;
-                if(cell === 1) ctx.fillRect(px, py, cellSize, cellSize);
+class GameScene extends Phaser.Scene {
+    constructor() { super({ key: 'GameScene' }); }
+
+    create() {
+        // 1. World Setup
+        this.physics.world.setBounds(0, 0, 2400, 1200);
+        this.cameras.main.setBounds(0, 0, 2400, 1200);
+        this.cameras.main.setBackgroundColor(CONSTANTS.COLORS.BG);
+
+        // 2. Level Generation (Procedural Mockup)
+        this.platforms = this.physics.add.staticGroup();
+        this.hazards = this.physics.add.staticGroup();
+        this.createLevel();
+
+        // 3. Player Setup
+        this.player = this.physics.add.sprite(100, 500, 'player');
+        this.player.setCollideWorldBounds(true);
+        this.player.setGravityY(CONSTANTS.GRAVITY);
+        this.player.setDragX(1200); // Snappy movement
+        
+        // Camera Follow
+        this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+        this.cameras.main.setZoom(1.2);
+
+        // 4. Physics Colliders
+        this.physics.add.collider(this.player, this.platforms);
+        this.physics.add.overlap(this.player, this.hazards, this.handleDeath, null, this);
+
+        // 5. Time Mechanics Data
+        this.timeState = {
+            isSlowed: false,
+            instability: 0.0,
+            cooldown: false
+        };
+
+        // 6. Shader Pipeline
+        if (this.game.renderer.type === Phaser.WEBGL) {
+            this.distortionPipeline = new Phaser.Renderer.WebGL.Pipelines.PostFXPipeline({
+                game: this.game,
+                renderTarget: true,
+                fragShader: TimeDistortionShader,
+                uniforms: {
+                    uMainSampler: { type: '1i', value: 0 },
+                    uTime: { type: '1f', value: 0 },
+                    uInstability: { type: '1f', value: 0 },
+                    uResolution: { type: '2f', value: { x: this.scale.width, y: this.scale.height } }
+                }
+            });
+            this.cameras.main.setPostPipeline(this.distortionPipeline);
+        }
+
+        // 7. Input Listeners (From UI Scene)
+        this.registry.events.on('input_move', this.handleMovement, this);
+        this.registry.events.on('input_jump', this.handleJump, this);
+        this.registry.events.on('input_time', this.toggleTime, this);
+
+        // Particles
+        this.emitter = this.add.particles(0, 0, 'particle', {
+            speed: 100,
+            scale: { start: 1, end: 0 },
+            blendMode: 'ADD',
+            lifespan: 500,
+            following: this.player,
+            on: false
+        });
+
+        // Load Save if exists
+        const saveData = SaveSystem.load();
+        if (saveData) {
+            this.player.setPosition(saveData.x, saveData.y);
+            console.log('Restored Checkpoint');
+        }
+    }
+
+    createLevel() {
+        // Floor
+        for(let x=0; x<40; x++) this.platforms.create(x*64, 1168, 'ground').refreshBody();
+        
+        // Platforms & Hazards Algorithm
+        let h = 1000;
+        for(let i=0; i<30; i++) {
+            let x = 300 + (i * 200);
+            h = Phaser.Math.Clamp(h + Phaser.Math.Between(-100, 100), 200, 1000);
+            
+            this.platforms.create(x, h, 'ground').refreshBody();
+
+            // Random Hazards
+            if(Math.random() > 0.6) {
+                this.hazards.create(x, h - 48, 'spike').refreshBody();
+            }
+            // Floating Platforms
+            if(Math.random() > 0.7) {
+                 this.platforms.create(x + 100, h - 150, 'ground').setScale(0.5).refreshBody();
+            }
+        }
+        
+        // End Zone
+        const finish = this.add.rectangle(2300, 1000, 64, 200, 0x00ff00).setOrigin(0.5);
+        this.physics.add.existing(finish, true);
+        this.physics.add.overlap(this.player, finish, this.nextLevel, null, this);
+    }
+
+    handleMovement(vector) {
+        if(!this.player.active) return;
+        this.player.setVelocityX(vector.x * CONSTANTS.PLAYER_SPEED);
+        
+        // Flip sprite visual
+        if (vector.x < 0) this.player.setFlipX(true);
+        else if (vector.x > 0) this.player.setFlipX(false);
+    }
+
+    handleJump() {
+        if (this.player.body.touching.down) {
+            this.player.setVelocityY(CONSTANTS.JUMP_FORCE);
+            // Coyote Time logic could go here
+        }
+    }
+
+    toggleTime(active) {
+        this.timeState.isSlowed = active;
+        
+        if (active) {
+            this.physics.world.timeScale = 3.0; // Physics engine slows down (High val = slow)
+            this.tweens.timeScale = 0.2; // Global tweens slow
+            this.emitter.start();
+        } else {
+            this.physics.world.timeScale = 1.0;
+            this.tweens.timeScale = 1.0;
+            this.emitter.stop();
+        }
+    }
+
+    handleDeath() {
+        if(!this.player.active) return;
+        
+        // Death FX
+        this.player.setActive(false).setVisible(false);
+        this.cameras.main.shake(200, 0.05);
+        
+        // Instability Penalty
+        this.timeState.instability = 1.0; // Full Glitch
+        
+        // Respawn logic
+        this.time.delayedCall(1000, () => {
+            this.scene.restart();
+        });
+    }
+
+    nextLevel() {
+        // Mockup: Just save and restart with higher difficulty
+        SaveSystem.save({ x: 100, y: 500, level: 2 });
+        this.cameras.main.fade(1000, 0, 0, 0, false, (camera, progress) => {
+            if (progress > 0.9) this.scene.restart();
+        });
+    }
+
+    update(time, delta) {
+        // Update Shader Uniforms
+        if (this.distortionPipeline) {
+            this.distortionPipeline.set1f('uTime', time / 1000);
+            
+            // Instability Mechanic
+            if (this.timeState.isSlowed) {
+                this.timeState.instability += 0.005;
+                if(this.timeState.instability > 1.0) {
+                    this.handleDeath(); // Time fracture killed you
+                }
+            } else {
+                this.timeState.instability = Phaser.Math.Clamp(this.timeState.instability - 0.01, 0, 1);
+            }
+            
+            this.distortionPipeline.set1f('uInstability', this.timeState.instability);
+        }
+
+        // Notify UI about instability
+        this.registry.events.emit('update_hud', this.timeState.instability);
+    }
+}
+
+class UIScene extends Phaser.Scene {
+    constructor() { super({ key: 'UIScene' }); }
+
+    create() {
+        const width = this.scale.width;
+        const height = this.scale.height;
+
+        // --- HUD ---
+        // Instability Bar
+        this.add.text(20, 20, "STABILITÉ TEMPORELLE", { fontSize: '12px', color: '#fff' });
+        this.barBg = this.add.rectangle(20, 40, 200, 10, 0x333333).setOrigin(0);
+        this.barFill = this.add.rectangle(20, 40, 200, 10, 0x00f3ff).setOrigin(0);
+
+        // --- MOBILE CONTROLS (Virtual Gamepad) ---
+        
+        // Joystick Zone (Left)
+        this.stickBase = this.add.circle(100, height - 100, 60, 0xffffff, 0.1);
+        this.stickKnob = this.add.circle(100, height - 100, 30, 0x00f3ff, 0.5);
+        
+        this.input.addPointer(2); // Multi-touch support
+        
+        // Movement Logic
+        this.input.on('pointermove', (pointer) => {
+            if (pointer.x < width / 2) {
+                const dist = Phaser.Math.Distance.Between(this.stickBase.x, this.stickBase.y, pointer.x, pointer.y);
+                const angle = Phaser.Math.Angle.Between(this.stickBase.x, this.stickBase.y, pointer.x, pointer.y);
                 
-                ctx.strokeStyle = '#222';
-                ctx.strokeRect(px, py, cellSize, cellSize);
+                // Cap distance
+                const cappedDist = Math.min(dist, 60);
+                
+                this.stickKnob.x = this.stickBase.x + Math.cos(angle) * cappedDist;
+                this.stickKnob.y = this.stickBase.y + Math.sin(angle) * cappedDist;
 
-                if (cell === 2) {
-                    ctx.fillStyle = CONSTANTS.COLORS.EVENT;
-                    ctx.beginPath(); ctx.arc(px + cellSize/2, py + cellSize/2, cellSize * 0.3, 0, Math.PI * 2); ctx.fill();
-                }
-                if (cell === 3) {
-                    ctx.strokeStyle = CONSTANTS.COLORS.GOAL;
-                    ctx.lineWidth = 3; ctx.strokeRect(px+5, py+5, cellSize-10, cellSize-10);
+                const normX = (this.stickKnob.x - this.stickBase.x) / 60;
+                
+                // Deadzone
+                if (Math.abs(normX) > 0.1) {
+                    this.registry.events.emit('input_move', { x: normX });
+                } else {
+                    this.registry.events.emit('input_move', { x: 0 });
                 }
             }
+        });
+
+        this.input.on('pointerup', (pointer) => {
+            if (pointer.x < width / 2) {
+                this.stickKnob.x = this.stickBase.x;
+                this.stickKnob.y = this.stickBase.y;
+                this.registry.events.emit('input_move', { x: 0 });
+            }
+        });
+
+        // Jump Button (Right Bottom)
+        const jumpBtn = this.add.circle(width - 80, height - 80, 40, 0xffffff, 0.1).setInteractive();
+        const jumpText = this.add.text(width - 80, height - 80, "SAUT", { fontSize: '14px' }).setOrigin(0.5);
+        
+        jumpBtn.on('pointerdown', () => {
+            jumpBtn.setFillStyle(0x00f3ff, 0.3);
+            this.registry.events.emit('input_jump');
+        });
+        jumpBtn.on('pointerup', () => jumpBtn.setFillStyle(0xffffff, 0.1));
+
+        // Time Manipulation Button (Right Upper)
+        const timeBtn = this.add.circle(width - 80, height - 180, 30, 0xff0055, 0.2).setInteractive();
+        const timeText = this.add.text(width - 80, height - 180, "TEMPS", { fontSize: '12px' }).setOrigin(0.5);
+        
+        timeBtn.on('pointerdown', () => {
+            this.registry.events.emit('input_time', true);
+            timeBtn.setFillStyle(0xff0055, 0.8);
+        });
+        timeBtn.on('pointerup', () => {
+            this.registry.events.emit('input_time', false);
+            timeBtn.setFillStyle(0xff0055, 0.2);
+        });
+
+        // Listen for HUD updates
+        this.registry.events.on('update_hud', (instability) => {
+            // Fill bar logic
+            const width = 200 * (1 - instability);
+            this.barFill.width = width;
+            
+            // Change color based on danger
+            if (instability > 0.8) this.barFill.setFillStyle(0xff0000);
+            else this.barFill.setFillStyle(0x00f3ff);
+            
+            // Shake effect on UI if unstable
+            if(instability > 0.5) {
+                this.cameras.main.shake(50, 0.005 * instability);
+            }
+        });
+    }
+}
+
+// ==========================================
+// 3. ENGINE INITIALIZATION
+// ==========================================
+
+const config = {
+    type: Phaser.WEBGL, // Force WebGL for Shaders
+    width: window.innerWidth,
+    height: window.innerHeight,
+    backgroundColor: '#050508',
+    parent: 'render-target',
+    pixelArt: true, // Retro/Crisp look
+    scale: {
+        mode: Phaser.Scale.FIT,
+        autoCenter: Phaser.Scale.CENTER_BOTH
+    },
+    physics: {
+        default: 'arcade',
+        arcade: {
+            gravity: { y: 0 }, // Handled manually for tighter control
+            debug: false
         }
-        this.cellSize = cellSize;
-    }
+    },
+    scene: [BootScene, GameScene, UIScene],
+    pipeline: { 'TimeDistortion': TimeDistortionShader }
+};
 
-    draw() {
-        this.ctx.fillStyle = '#000';
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+// Start Engine
+const game = new Phaser.Game(config);
 
-        const offsetX = (this.canvas.width / 2) - (this.state.playerPos.x * this.cellSize) - (this.cellSize / 2);
-        const offsetY = (this.canvas.height / 2) - (this.state.playerPos.y * this.cellSize) - (this.cellSize / 2);
+// Handle Resize
+window.addEventListener('resize', () => {
+    game.scale.resize(window.innerWidth, window.innerHeight);
+});
 
-        this.ctx.save();
-        this.ctx.translate(offsetX, offsetY);
-        
-        // OPTIMIZATION: Blit the pre-rendered map
-        this.ctx.drawImage(this.mapCanvas, 0, 0);
-
-        // Draw Player
-        const pX = this.state.playerPos.x * this.cellSize;
-        const pY = this.state.playerPos.y * this.cellSize;
-        this.ctx.fillStyle = CONSTANTS.COLORS.PLAYER;
-        this.ctx.beginPath();
-        this.ctx.arc(pX + this.cellSize/2, pY + this.cellSize/2, this.cellSize * 0.35, 0, Math.PI*2);
-        this.ctx.fill();
-
-        this.ctx.restore();
-    }
-}
-
-class App {
-    constructor() {
-        this.bus = new EventEmitter();
-        this.state = new GameState(this.bus);
-        this.canvas = document.getElementById('gameCanvas');
-        this.renderer = new Renderer(this.canvas, this.state);
-        
-        this.bindEvents();
-        this.state.init();
-        this.loop();
-    }
-
-    bindEvents() {
-        window.addEventListener('keydown', (e) => {
-            switch(e.key) {
-                case 'ArrowUp': case 'w': this.state.movePlayer(0, -1); break;
-                case 'ArrowDown': case 's': this.state.movePlayer(0, 1); break;
-                case 'ArrowLeft': case 'a': this.state.movePlayer(-1, 0); break;
-                case 'ArrowRight': case 'd': this.state.movePlayer(1, 0); break;
-            }
-        });
-
-        document.querySelectorAll('.d-pad-btn').forEach(btn => {
-            btn.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                const dir = btn.dataset.dir;
-                if (dir === 'up') this.state.movePlayer(0, -1);
-                if (dir === 'down') this.state.movePlayer(0, 1);
-                if (dir === 'left') this.state.movePlayer(-1, 0);
-                if (dir === 'right') this.state.movePlayer(1, 0);
-            }, { passive: false });
-        });
-    }
-
-    loop() {
-        this.renderer.draw();
-        requestAnimationFrame(() => this.loop());
-    }
-}
-
-// Initialize
-new App();
 </script>
 </body>
 </html>
+```
