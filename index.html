@@ -1,482 +1,271 @@
-```html
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
-    <title>FRACTURE DU TEMPS | Mobile Build v1.0</title>
-    <style>
-        /* INDUSTRIAL UI RESET */
-        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-user-select: none; touch-action: none; }
-        body { background-color: #050508; overflow: hidden; font-family: 'Courier New', monospace; color: #00f3ff; }
-        #render-target { width: 100vw; height: 100vh; display: block; }
-        
-        /* LOADING OVERLAY */
-        #loader {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: #000; display: flex; flex-direction: column;
-            justify-content: center; align-items: center; z-index: 9999;
-            transition: opacity 0.5s ease;
-        }
-        .spinner {
-            width: 50px; height: 50px; border: 3px solid #111;
-            border-top: 3px solid #00f3ff; border-radius: 50%;
-            animation: spin 1s linear infinite; margin-bottom: 20px;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .log-text { font-size: 12px; opacity: 0.7; letter-spacing: 1px; }
-    </style>
-    <!-- PHASER 3 ENGINE (Industrial Standard for Web 2D) -->
-    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+<meta charset="UTF-8">
+<title>FRACTURE</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#050508">
+
+<style>
+html,body{
+  margin:0;
+  background:#050508;
+  overflow:hidden;
+}
+canvas{
+  image-rendering:pixelated;
+}
+
+/* Overlay optimisé (pas de reflow) */
+#overlay{
+  position:fixed;
+  inset:0;
+  opacity:0;
+  pointer-events:none;
+  background:#000;
+  color:#0ff;
+  font-family:monospace;
+  font-size:14px;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  text-align:center;
+  z-index:999;
+  transition:opacity .3s ease;
+}
+#overlay.active{
+  opacity:1;
+  pointer-events:auto;
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
 </head>
 <body>
 
-<div id="loader">
-    <div class="spinner"></div>
-    <div class="log-text">INITIALIZING CHRONOS ENGINE...</div>
-</div>
-
-<div id="render-target"></div>
+<div id="overlay">SAVE FILE CORRUPTED<br>RECOVERY MODE…</div>
 
 <script>
-/**
- * NEXUS ARCHITECT v4.0 - INDUSTRIAL GRADE GAME SCRIPT
- * PROJECT: FRACTURE DU TEMPS (Mobile Optimized)
- * ARCHITECTURE: ECS Pattern, Singleton Managers, WebGL Shaders
- */
+// ===================================================
+// SAVE SYSTEM (SAFE)
+// ===================================================
+const SAVE_KEY="FRACTURE_SAVE";
 
-// ==========================================
-// 1. CORE UTILITIES & CONFIGURATION
-// ==========================================
-
-const CONSTANTS = {
-    GRAVITY: 1200,
-    PLAYER_SPEED: 260,
-    JUMP_FORCE: -550,
-    TIME_SLOW_FACTOR: 0.2,
-    INSTABILITY_MAX: 100,
-    COLORS: {
-        BG: 0x050508,
-        PLAYER: 0x00f3ff,
-        DANGER: 0xff0055,
-        GROUND: 0x1a1a24,
-        TIME_FX: 0xcc00ff
-    },
-    STORAGE_KEY: 'FRACTURE_DATA_V1'
+const Save={
+  load(){
+    try{
+      return JSON.parse(localStorage.getItem(SAVE_KEY)) ||
+        {level:1,deaths:0,ach:{},corrupted:false};
+    }catch{
+      return {level:1,deaths:0,ach:{},corrupted:false};
+    }
+  },
+  save(d){
+    localStorage.setItem(SAVE_KEY,JSON.stringify(d));
+  },
+  fakeCorrupt(){
+    const s=this.load();
+    if(s.corrupted) return;
+    s.corrupted=true;
+    s._backup=btoa(JSON.stringify({...s,corrupted:false}));
+    this.save(s);
+  },
+  restore(){
+    const s=this.load();
+    if(s._backup){
+      const r=JSON.parse(atob(s._backup));
+      r.corrupted=false;
+      delete r._backup;
+      this.save(r);
+      return r;
+    }
+    return s;
+  }
 };
 
-// Singleton for Save Management (Enterprise Persistence)
-class SaveSystem {
-    static save(data) {
-        try {
-            const payload = btoa(JSON.stringify(data)); // Basic Obfuscation
-            localStorage.setItem(CONSTANTS.STORAGE_KEY, payload);
-            console.log('[SYS] Progress Saved.');
-        } catch (e) { console.error('[SYS] Save Failed', e); }
-    }
-
-    static load() {
-        try {
-            const raw = localStorage.getItem(CONSTANTS.STORAGE_KEY);
-            return raw ? JSON.parse(atob(raw)) : null;
-        } catch (e) { return null; }
-    }
-}
-
-// Custom WebGL Shader for Time Distortion (Glitch Effect)
-const TimeDistortionShader = `
-precision mediump float;
-uniform sampler2D uMainSampler;
-uniform vec2 uResolution;
-uniform float uTime;
-uniform float uInstability; // 0.0 to 1.0
-
-varying vec2 outTexCoord;
-
-float rand(vec2 co){
-    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
-}
-
-void main() {
-    vec2 uv = outTexCoord;
-    
-    // Chromatic Aberration based on Instability
-    float shift = uInstability * 0.02;
-    float r = texture2D(uMainSampler, uv + vec2(shift, 0.0)).r;
-    float g = texture2D(uMainSampler, uv).g;
-    float b = texture2D(uMainSampler, uv - vec2(shift, 0.0)).b;
-    
-    // Horizontal Glitch Slice
-    if(uInstability > 0.3) {
-        float noise = rand(vec2(0.0, floor(uv.y * 50.0) + uTime));
-        if (noise < uInstability * 0.1) {
-            uv.x += (rand(vec2(uTime)) - 0.5) * 0.1;
-            r = texture2D(uMainSampler, uv).r;
-            g = texture2D(uMainSampler, uv).g;
-            b = texture2D(uMainSampler, uv).b;
-        }
-    }
-
-    // Scanlines
-    float scanline = sin(uv.y * 800.0) * 0.04;
-    
-    gl_FragColor = vec4(r, g, b, 1.0) - scanline;
-}
-`;
-
-// ==========================================
-// 2. GAME SCENES
-// ==========================================
-
-class BootScene extends Phaser.Scene {
-    constructor() { super({ key: 'BootScene' }); }
-
-    preload() {
-        // Procedural Texture Generation (No external assets dependencies)
-        const gfx = this.make.graphics({x:0, y:0, add: false});
-        
-        // Player Texture
-        gfx.fillStyle(CONSTANTS.COLORS.PLAYER, 1);
-        gfx.fillRect(0, 0, 32, 32);
-        gfx.generateTexture('player', 32, 32);
-        
-        // Ground Texture
-        gfx.clear();
-        gfx.fillStyle(CONSTANTS.COLORS.GROUND, 1);
-        gfx.lineStyle(2, 0x333344, 1);
-        gfx.fillRect(0, 0, 64, 64);
-        gfx.strokeRect(0, 0, 64, 64);
-        gfx.generateTexture('ground', 64, 64);
-
-        // Danger Texture
-        gfx.clear();
-        gfx.fillStyle(CONSTANTS.COLORS.DANGER, 1);
-        gfx.fillTriangle(16, 0, 32, 32, 0, 32);
-        gfx.generateTexture('spike', 32, 32);
-
-        // Particle Texture
-        gfx.clear();
-        gfx.fillStyle(CONSTANTS.COLORS.TIME_FX, 1);
-        gfx.fillCircle(4, 4, 4);
-        gfx.generateTexture('particle', 8, 8);
-    }
-
-    create() {
-        document.getElementById('loader').style.opacity = '0';
-        setTimeout(() => {
-            document.getElementById('loader').remove();
-            this.scene.start('GameScene');
-            this.scene.start('UIScene'); // Parallel UI Scene
-        }, 500);
-    }
-}
-
-class GameScene extends Phaser.Scene {
-    constructor() { super({ key: 'GameScene' }); }
-
-    create() {
-        // 1. World Setup
-        this.physics.world.setBounds(0, 0, 2400, 1200);
-        this.cameras.main.setBounds(0, 0, 2400, 1200);
-        this.cameras.main.setBackgroundColor(CONSTANTS.COLORS.BG);
-
-        // 2. Level Generation (Procedural Mockup)
-        this.platforms = this.physics.add.staticGroup();
-        this.hazards = this.physics.add.staticGroup();
-        this.createLevel();
-
-        // 3. Player Setup
-        this.player = this.physics.add.sprite(100, 500, 'player');
-        this.player.setCollideWorldBounds(true);
-        this.player.setGravityY(CONSTANTS.GRAVITY);
-        this.player.setDragX(1200); // Snappy movement
-        
-        // Camera Follow
-        this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
-        this.cameras.main.setZoom(1.2);
-
-        // 4. Physics Colliders
-        this.physics.add.collider(this.player, this.platforms);
-        this.physics.add.overlap(this.player, this.hazards, this.handleDeath, null, this);
-
-        // 5. Time Mechanics Data
-        this.timeState = {
-            isSlowed: false,
-            instability: 0.0,
-            cooldown: false
-        };
-
-        // 6. Shader Pipeline
-        if (this.game.renderer.type === Phaser.WEBGL) {
-            this.distortionPipeline = new Phaser.Renderer.WebGL.Pipelines.PostFXPipeline({
-                game: this.game,
-                renderTarget: true,
-                fragShader: TimeDistortionShader,
-                uniforms: {
-                    uMainSampler: { type: '1i', value: 0 },
-                    uTime: { type: '1f', value: 0 },
-                    uInstability: { type: '1f', value: 0 },
-                    uResolution: { type: '2f', value: { x: this.scale.width, y: this.scale.height } }
-                }
-            });
-            this.cameras.main.setPostPipeline(this.distortionPipeline);
-        }
-
-        // 7. Input Listeners (From UI Scene)
-        this.registry.events.on('input_move', this.handleMovement, this);
-        this.registry.events.on('input_jump', this.handleJump, this);
-        this.registry.events.on('input_time', this.toggleTime, this);
-
-        // Particles
-        this.emitter = this.add.particles(0, 0, 'particle', {
-            speed: 100,
-            scale: { start: 1, end: 0 },
-            blendMode: 'ADD',
-            lifespan: 500,
-            following: this.player,
-            on: false
-        });
-
-        // Load Save if exists
-        const saveData = SaveSystem.load();
-        if (saveData) {
-            this.player.setPosition(saveData.x, saveData.y);
-            console.log('Restored Checkpoint');
-        }
-    }
-
-    createLevel() {
-        // Floor
-        for(let x=0; x<40; x++) this.platforms.create(x*64, 1168, 'ground').refreshBody();
-        
-        // Platforms & Hazards Algorithm
-        let h = 1000;
-        for(let i=0; i<30; i++) {
-            let x = 300 + (i * 200);
-            h = Phaser.Math.Clamp(h + Phaser.Math.Between(-100, 100), 200, 1000);
-            
-            this.platforms.create(x, h, 'ground').refreshBody();
-
-            // Random Hazards
-            if(Math.random() > 0.6) {
-                this.hazards.create(x, h - 48, 'spike').refreshBody();
-            }
-            // Floating Platforms
-            if(Math.random() > 0.7) {
-                 this.platforms.create(x + 100, h - 150, 'ground').setScale(0.5).refreshBody();
-            }
-        }
-        
-        // End Zone
-        const finish = this.add.rectangle(2300, 1000, 64, 200, 0x00ff00).setOrigin(0.5);
-        this.physics.add.existing(finish, true);
-        this.physics.add.overlap(this.player, finish, this.nextLevel, null, this);
-    }
-
-    handleMovement(vector) {
-        if(!this.player.active) return;
-        this.player.setVelocityX(vector.x * CONSTANTS.PLAYER_SPEED);
-        
-        // Flip sprite visual
-        if (vector.x < 0) this.player.setFlipX(true);
-        else if (vector.x > 0) this.player.setFlipX(false);
-    }
-
-    handleJump() {
-        if (this.player.body.touching.down) {
-            this.player.setVelocityY(CONSTANTS.JUMP_FORCE);
-            // Coyote Time logic could go here
-        }
-    }
-
-    toggleTime(active) {
-        this.timeState.isSlowed = active;
-        
-        if (active) {
-            this.physics.world.timeScale = 3.0; // Physics engine slows down (High val = slow)
-            this.tweens.timeScale = 0.2; // Global tweens slow
-            this.emitter.start();
-        } else {
-            this.physics.world.timeScale = 1.0;
-            this.tweens.timeScale = 1.0;
-            this.emitter.stop();
-        }
-    }
-
-    handleDeath() {
-        if(!this.player.active) return;
-        
-        // Death FX
-        this.player.setActive(false).setVisible(false);
-        this.cameras.main.shake(200, 0.05);
-        
-        // Instability Penalty
-        this.timeState.instability = 1.0; // Full Glitch
-        
-        // Respawn logic
-        this.time.delayedCall(1000, () => {
-            this.scene.restart();
-        });
-    }
-
-    nextLevel() {
-        // Mockup: Just save and restart with higher difficulty
-        SaveSystem.save({ x: 100, y: 500, level: 2 });
-        this.cameras.main.fade(1000, 0, 0, 0, false, (camera, progress) => {
-            if (progress > 0.9) this.scene.restart();
-        });
-    }
-
-    update(time, delta) {
-        // Update Shader Uniforms
-        if (this.distortionPipeline) {
-            this.distortionPipeline.set1f('uTime', time / 1000);
-            
-            // Instability Mechanic
-            if (this.timeState.isSlowed) {
-                this.timeState.instability += 0.005;
-                if(this.timeState.instability > 1.0) {
-                    this.handleDeath(); // Time fracture killed you
-                }
-            } else {
-                this.timeState.instability = Phaser.Math.Clamp(this.timeState.instability - 0.01, 0, 1);
-            }
-            
-            this.distortionPipeline.set1f('uInstability', this.timeState.instability);
-        }
-
-        // Notify UI about instability
-        this.registry.events.emit('update_hud', this.timeState.instability);
-    }
-}
-
-class UIScene extends Phaser.Scene {
-    constructor() { super({ key: 'UIScene' }); }
-
-    create() {
-        const width = this.scale.width;
-        const height = this.scale.height;
-
-        // --- HUD ---
-        // Instability Bar
-        this.add.text(20, 20, "STABILITÉ TEMPORELLE", { fontSize: '12px', color: '#fff' });
-        this.barBg = this.add.rectangle(20, 40, 200, 10, 0x333333).setOrigin(0);
-        this.barFill = this.add.rectangle(20, 40, 200, 10, 0x00f3ff).setOrigin(0);
-
-        // --- MOBILE CONTROLS (Virtual Gamepad) ---
-        
-        // Joystick Zone (Left)
-        this.stickBase = this.add.circle(100, height - 100, 60, 0xffffff, 0.1);
-        this.stickKnob = this.add.circle(100, height - 100, 30, 0x00f3ff, 0.5);
-        
-        this.input.addPointer(2); // Multi-touch support
-        
-        // Movement Logic
-        this.input.on('pointermove', (pointer) => {
-            if (pointer.x < width / 2) {
-                const dist = Phaser.Math.Distance.Between(this.stickBase.x, this.stickBase.y, pointer.x, pointer.y);
-                const angle = Phaser.Math.Angle.Between(this.stickBase.x, this.stickBase.y, pointer.x, pointer.y);
-                
-                // Cap distance
-                const cappedDist = Math.min(dist, 60);
-                
-                this.stickKnob.x = this.stickBase.x + Math.cos(angle) * cappedDist;
-                this.stickKnob.y = this.stickBase.y + Math.sin(angle) * cappedDist;
-
-                const normX = (this.stickKnob.x - this.stickBase.x) / 60;
-                
-                // Deadzone
-                if (Math.abs(normX) > 0.1) {
-                    this.registry.events.emit('input_move', { x: normX });
-                } else {
-                    this.registry.events.emit('input_move', { x: 0 });
-                }
-            }
-        });
-
-        this.input.on('pointerup', (pointer) => {
-            if (pointer.x < width / 2) {
-                this.stickKnob.x = this.stickBase.x;
-                this.stickKnob.y = this.stickBase.y;
-                this.registry.events.emit('input_move', { x: 0 });
-            }
-        });
-
-        // Jump Button (Right Bottom)
-        const jumpBtn = this.add.circle(width - 80, height - 80, 40, 0xffffff, 0.1).setInteractive();
-        const jumpText = this.add.text(width - 80, height - 80, "SAUT", { fontSize: '14px' }).setOrigin(0.5);
-        
-        jumpBtn.on('pointerdown', () => {
-            jumpBtn.setFillStyle(0x00f3ff, 0.3);
-            this.registry.events.emit('input_jump');
-        });
-        jumpBtn.on('pointerup', () => jumpBtn.setFillStyle(0xffffff, 0.1));
-
-        // Time Manipulation Button (Right Upper)
-        const timeBtn = this.add.circle(width - 80, height - 180, 30, 0xff0055, 0.2).setInteractive();
-        const timeText = this.add.text(width - 80, height - 180, "TEMPS", { fontSize: '12px' }).setOrigin(0.5);
-        
-        timeBtn.on('pointerdown', () => {
-            this.registry.events.emit('input_time', true);
-            timeBtn.setFillStyle(0xff0055, 0.8);
-        });
-        timeBtn.on('pointerup', () => {
-            this.registry.events.emit('input_time', false);
-            timeBtn.setFillStyle(0xff0055, 0.2);
-        });
-
-        // Listen for HUD updates
-        this.registry.events.on('update_hud', (instability) => {
-            // Fill bar logic
-            const width = 200 * (1 - instability);
-            this.barFill.width = width;
-            
-            // Change color based on danger
-            if (instability > 0.8) this.barFill.setFillStyle(0xff0000);
-            else this.barFill.setFillStyle(0x00f3ff);
-            
-            // Shake effect on UI if unstable
-            if(instability > 0.5) {
-                this.cameras.main.shake(50, 0.005 * instability);
-            }
-        });
-    }
-}
-
-// ==========================================
-// 3. ENGINE INITIALIZATION
-// ==========================================
-
-const config = {
-    type: Phaser.WEBGL, // Force WebGL for Shaders
-    width: window.innerWidth,
-    height: window.innerHeight,
-    backgroundColor: '#050508',
-    parent: 'render-target',
-    pixelArt: true, // Retro/Crisp look
-    scale: {
-        mode: Phaser.Scale.FIT,
-        autoCenter: Phaser.Scale.CENTER_BOTH
-    },
-    physics: {
-        default: 'arcade',
-        arcade: {
-            gravity: { y: 0 }, // Handled manually for tighter control
-            debug: false
-        }
-    },
-    scene: [BootScene, GameScene, UIScene],
-    pipeline: { 'TimeDistortion': TimeDistortionShader }
+// ===================================================
+// META STATE
+// ===================================================
+const Meta={
+  gravity:600,
+  invert:false
 };
 
-// Start Engine
-const game = new Phaser.Game(config);
+// ===================================================
+// GLITCH SHADER (STABLE)
+// ===================================================
+class Glitch extends Phaser.Renderer.WebGL.Pipelines.PostFXPipeline{
+  constructor(game){
+    super({
+      game,
+      fragShader:`
+      precision mediump float;
+      uniform sampler2D uMainSampler;
+      uniform float t;
+      varying vec2 outTexCoord;
 
-// Handle Resize
-window.addEventListener('resize', () => {
-    game.scale.resize(window.innerWidth, window.innerHeight);
+      float rand(vec2 c){
+        return fract(sin(dot(c,vec2(12.9898,78.233)))*43758.5453);
+      }
+
+      void main(){
+        vec2 uv=outTexCoord;
+        float g=rand(vec2(floor(uv.y*240.0),floor(t*60.0)));
+        uv.x+=step(0.97,g)*0.05;
+        vec4 c=texture2D(uMainSampler,uv);
+        c.rgb+=g*0.2;
+        gl_FragColor=c;
+      }`
+    });
+  }
+}
+
+// ===================================================
+// SCENES
+// ===================================================
+class Boot extends Phaser.Scene{
+  create(){
+    const g=this.make.graphics({add:false});
+
+    g.fillStyle(0x00ffff).fillRect(0,0,16,16).generateTexture("player",16,16);
+    g.clear();
+    g.fillStyle(0xff0055).fillRect(0,0,16,16).generateTexture("boss",16,16);
+    g.clear();
+    g.fillStyle(0x333344).fillRect(0,0,32,8).generateTexture("ground",32,8);
+
+    if(this.game.renderer.type===Phaser.WEBGL){
+      if(!this.renderer.pipelines.get("glitch")){
+        this.renderer.pipelines.addPostPipeline("glitch",Glitch);
+      }
+    }
+
+    this.scene.start("Game");
+  }
+}
+
+class Game extends Phaser.Scene{
+  create(){
+    this.save=Save.load();
+    this.physics.world.gravity.y=Meta.gravity;
+
+    this.cameras.main.setPostPipeline("glitch");
+
+    this.player=this.physics.add.sprite(30,100,"player");
+    this.player.setCollideWorldBounds(true);
+
+    this.platforms=this.physics.add.staticGroup();
+    for(let i=0;i<8+this.save.level;i++){
+      this.platforms.create(80*i,200+Math.sin(i)*40,"ground");
+    }
+
+    this.physics.add.collider(this.player,this.platforms);
+    this.cursors=this.input.keyboard.createCursorKeys();
+
+    if(this.save.level%3===0){
+      this.spawnBoss();
+    }
+
+    if(this.save.corrupted){
+      const o=document.getElementById("overlay");
+      o.classList.add("active");
+      Meta.invert=true;
+      this.time.delayedCall(3000,()=>{
+        Save.restore();
+        Meta.invert=false;
+        o.classList.remove("active");
+      });
+    }
+  }
+
+  spawnBoss(){
+    this.boss=this.physics.add.sprite(200,100,"boss").setScale(2);
+    this.boss.hp=3;
+    this.boss.body.allowGravity=false;
+
+    this.physics.add.overlap(this.player,this.boss,()=>{
+      if(this.player.body.velocity.y>0 && this.player.y<this.boss.y-10){
+        this.boss.hp--;
+        this.player.setVelocityY(-220);
+        this.cameras.main.shake(120,0.015);
+
+        if(this.boss.hp<=0){
+          this.boss.destroy();
+          this.boss=null;
+          Save.fakeCorrupt();
+        }
+      }else{
+        this.handleDeath();
+      }
+    });
+  }
+
+  handleDeath(){
+    this.save.deaths++;
+    if(this.save.deaths>=20) this.save.ach.obsession=true;
+    Save.save(this.save);
+    this.scene.restart();
+  }
+
+  update(time){
+    const p=this.cameras.main.getPostPipeline("glitch");
+    if(p) p.setFloat1("t",time*0.001);
+
+    const dir=Meta.invert?-1:1;
+    if(this.cursors.left.isDown) this.player.setVelocityX(-120*dir);
+    else if(this.cursors.right.isDown) this.player.setVelocityX(120*dir);
+    else this.player.setVelocityX(0);
+
+    if(this.cursors.up.isDown && this.player.body.blocked.down){
+      this.player.setVelocityY(-300);
+    }
+
+    if(this.boss){
+      if(Math.abs(this.boss.x-this.player.x)<120){
+        this.physics.moveToObject(this.boss,this.player,60);
+      }else{
+        this.boss.setVelocityX(0);
+      }
+    }
+
+    if(this.player.x>250 && !this.boss){
+      this.save.level++;
+      Save.save(this.save);
+
+      if(this.save.level>=10 && this.save.ach.obsession){
+        this.scene.start("MetaEnd");
+      }else{
+        this.scene.restart();
+      }
+    }
+
+    if(this.player.y>300){
+      this.handleDeath();
+    }
+  }
+}
+
+class MetaEnd extends Phaser.Scene{
+  create(){
+    this.add.text(20,80,
+`TU AS VU AU-DELÀ DU JEU.
+
+MERCI D'AVOIR INSISTÉ.`,
+    {font:"14px monospace",color:"#00ffff"});
+  }
+}
+
+// ===================================================
+// GAME INIT
+// ===================================================
+new Phaser.Game({
+  type:Phaser.WEBGL,
+  width:320,
+  height:240,
+  zoom:2,
+  pixelArt:true,
+  physics:{default:"arcade"},
+  scene:[Boot,Game,MetaEnd]
 });
-
 </script>
 </body>
 </html>
