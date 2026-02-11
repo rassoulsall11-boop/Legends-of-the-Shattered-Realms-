@@ -3,46 +3,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NEON VORTEX</title>
+    <title>NEON VORTEX - AUTH SYSTÈME</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap');
-        body { margin: 0; background: #050505; color: white; font-family: 'Orbitron', sans-serif; overflow: hidden; }
-        .overlay { position: absolute; inset: 0; background: rgba(5,5,5,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; }
+        :root { --primary: #00f3ff; --secondary: #ff0055; --bg: #050505; }
+        * { box-sizing: border-box; user-select: none; touch-action: none; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: var(--bg); font-family: 'Orbitron', sans-serif; color: white; }
+        canvas { display: block; position: absolute; top: 0; left: 0; }
+        
+        .overlay { position: absolute; inset: 0; background: rgba(5,5,5,0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; text-align: center; padding: 20px; }
         .hidden { display: none !important; }
-        button { padding: 15px 30px; background: #00f3ff; border: none; font-family: 'Orbitron'; font-weight: 900; cursor: pointer; margin: 10px; }
-        #debug { position: absolute; bottom: 10px; left: 10px; font-size: 10px; color: #ff0055; pointer-events: none; }
-        input { padding: 12px; background: #111; border: 1px solid #00f3ff; color: white; text-align: center; font-family: 'Orbitron'; }
+        
+        h1 { font-size: 2.2rem; background: linear-gradient(to right, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 20px; }
+        
+        input { background: #111; border: 1px solid var(--primary); color: white; padding: 12px; text-align: center; font-family: 'Orbitron'; margin-bottom: 10px; width: 250px; outline: none; }
+        input:focus { box-shadow: 0 0 10px var(--primary); }
+        
+        .btn-group { display: flex; gap: 10px; margin-top: 10px; }
+        button { padding: 15px 25px; font-family: 'Orbitron'; font-weight: 900; background: var(--primary); border: none; cursor: pointer; color: #000; clip-path: polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%); transition: 0.3s; }
+        button:active { transform: scale(0.95); }
+        .btn-sec { background: var(--secondary); color: white; }
+        
+        #leaderboard { margin-top: 20px; border: 1px solid var(--primary); padding: 10px; width: 280px; background: rgba(0, 243, 255, 0.05); }
+        .row { display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding: 8px 0; font-size: 0.9rem; }
+        #errorMsg { color: var(--secondary); font-size: 0.8rem; margin-top: 10px; height: 20px; }
     </style>
 </head>
 <body>
 
 <canvas id="gameCanvas"></canvas>
-<div id="debug">Système prêt...</div>
 
 <div id="authScreen" class="overlay">
-    <h1 style="color:#00f3ff">NEON VORTEX</h1>
-    <button id="loginBtn" style="background:#db4437; color:white;">CONNEXION GOOGLE</button>
-</div>
-
-<div id="pseudoScreen" class="overlay hidden">
-    <h1>TON PSEUDO</h1>
-    <input type="text" id="pseudoInput" placeholder="..." maxlength="12">
-    <button id="saveBtn">VALIDER</button>
+    <h1>NEON VORTEX</h1>
+    <input type="text" id="userPseudo" placeholder="TON PSEUDO" maxlength="12">
+    <input type="password" id="userPass" placeholder="MOT DE PASSE">
+    <div class="btn-group">
+        <button id="signUpBtn">S'INSCRIRE</button>
+        <button id="loginBtn" class="btn-sec">CONNEXION</button>
+    </div>
+    <div id="errorMsg"></div>
 </div>
 
 <div id="menuScreen" class="overlay hidden">
-    <h1 id="welcome" style="color:#ff0055">AGENTS</h1>
-    <button id="startBtn">JOUER</button>
-    <div id="leaderboard" style="border:1px solid #00f3ff; padding:10px; width:250px; margin-top:20px;">
-        <div id="scores">Chargement du classement...</div>
+    <h1 id="welcome">AGENTS</h1>
+    <button id="startBtn">DÉMARRER LA MISSION</button>
+    <div id="leaderboard">
+        <div style="color:var(--primary); margin-bottom:10px; font-weight:bold; letter-spacing: 2px;">TOP MONDIAL</div>
+        <div id="scores">Chargement...</div>
     </div>
+    <button id="logoutBtn" style="margin-top:20px; font-size: 10px; padding: 5px 10px; background: #333; color: #999;">DÉCONNEXION</button>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getAuth, signInWithRedirect, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
     import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, limit, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
+    // Config officielle
     const firebaseConfig = {
         apiKey: "AIzaSyBBvuAx9E3M-zwGDrhZZkc",
         authDomain: "neon-vortex-d3d36.firebaseapp.com",
@@ -52,85 +69,110 @@
         appId: "1:15753332231:web:e08828b766ec8287e08828"
     };
 
-    const log = (msg) => document.getElementById('debug').innerText = msg;
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth();
+    const db = getFirestore();
+    let profile = { pseudo: "", score: 0, uid: "" };
 
-    try {
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const provider = new GoogleAuthProvider();
-        let userUID = null;
+    const errorMsg = document.getElementById('errorMsg');
 
-        document.getElementById('loginBtn').onclick = () => signInWithRedirect(auth, provider);
+    // --- SYSTÈME DE COMPTE ---
 
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                userUID = user.uid;
+    // S'inscrire
+    document.getElementById('signUpBtn').onclick = async () => {
+        const pseudo = document.getElementById('userPseudo').value.trim();
+        const pass = document.getElementById('userPass').value;
+        if(pseudo.length < 3) return errorMsg.innerText = "Pseudo trop court !";
+        
+        try {
+            // On transforme le pseudo en email fictif pour Firebase
+            const res = await createUserWithEmailAndPassword(auth, pseudo + "@vortex.com", pass);
+            await setDoc(doc(db, "players", res.user.uid), { pseudo: pseudo, score: 0 });
+            errorMsg.style.color = "lime";
+            errorMsg.innerText = "Compte créé ! Connecte-toi.";
+        } catch (e) { errorMsg.innerText = "Erreur : Ce pseudo existe déjà ou mot de passe trop court."; }
+    };
+
+    // Se connecter
+    document.getElementById('loginBtn').onclick = async () => {
+        const pseudo = document.getElementById('userPseudo').value.trim();
+        const pass = document.getElementById('userPass').value;
+        try {
+            await signInWithEmailAndPassword(auth, pseudo + "@vortex.com", pass);
+        } catch (e) { errorMsg.innerText = "Pseudo ou mot de passe incorrect."; }
+    };
+
+    // Surveiller l'état de connexion
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            const snap = await getDoc(doc(db, "players", user.uid));
+            if (snap.exists()) {
+                profile = { ...snap.data(), uid: user.uid };
                 document.getElementById('authScreen').classList.add('hidden');
-                log("Utilisateur connecté !");
-                
-                const userDoc = await getDoc(doc(db, "players", user.uid)).catch(e => log("Erreur Firestore: " + e.message));
-                if (userDoc && userDoc.exists()) {
-                    showMenu(userDoc.data().pseudo);
-                } else {
-                    document.getElementById('pseudoScreen').classList.remove('hidden');
-                }
+                showMenu();
             }
-        });
-
-        document.getElementById('saveBtn').onclick = async () => {
-            const p = document.getElementById('pseudoInput').value.trim();
-            if(p.length > 2) {
-                await setDoc(doc(db, "players", userUID), { pseudo: p, score: 0 });
-                document.getElementById('pseudoScreen').classList.add('hidden');
-                showMenu(p);
-            }
-        };
-
-        function showMenu(name) {
-            document.getElementById('menuScreen').classList.remove('hidden');
-            document.getElementById('welcome').innerText = name;
-            const q = query(collection(db, "players"), orderBy("score", "desc"), limit(5));
-            onSnapshot(q, (snap) => {
-                let html = "";
-                snap.forEach(d => html += `<div style="display:flex; justify-content:space-between"><span>${d.data().pseudo}</span><span>${Math.floor(d.data().score)}</span></div>`);
-                document.getElementById('scores').innerHTML = html;
-            });
-        }
-
-        // --- MINI JEU ---
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        let state = 'WAIT', score = 0, px = 0, py = 0;
-        canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-
-        document.getElementById('startBtn').onclick = () => {
+        } else {
+            document.getElementById('authScreen').classList.remove('hidden');
             document.getElementById('menuScreen').classList.add('hidden');
-            state = 'PLAY'; score = 0;
-        };
+        }
+    });
 
-        window.onmousemove = window.ontouchmove = (e) => {
-            const t = e.touches ? e.touches[0] : e;
-            px = t.clientX; py = t.clientY;
-        };
+    document.getElementById('logoutBtn').onclick = () => signOut(auth);
 
-        function loop() {
-            ctx.fillStyle = 'black'; ctx.fillRect(0,0,canvas.width,canvas.height);
-            if(state === 'PLAY') {
-                score += 0.1;
-                ctx.fillStyle = '#00f3ff'; ctx.beginPath(); ctx.arc(px, py, 15, 0, 7); ctx.fill();
-                ctx.fillText("SCORE: " + Math.floor(score), 20, 30);
-                if(score > 50) { // Test fin de jeu rapide
+    function showMenu() {
+        document.getElementById('menuScreen').classList.remove('hidden');
+        document.getElementById('welcome').innerText = "AGENT: " + profile.pseudo;
+        
+        const q = query(collection(db, "players"), orderBy("score", "desc"), limit(5));
+        onSnapshot(q, (snap) => {
+            const list = document.getElementById('scores');
+            list.innerHTML = "";
+            snap.forEach(d => {
+                const p = d.data();
+                list.innerHTML += `<div class="row"><span>${p.pseudo}</span><span>${Math.floor(p.score)}</span></div>`;
+            });
+        });
+    }
+
+    // --- LOGIQUE DU JEU ---
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    let enemies = [], player = { x: 0, y: 0, tx: 0, ty: 0 }, score = 0, state = 'WAIT';
+
+    function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    window.addEventListener('resize', resize); resize();
+    const getPos = (e) => { const t = e.touches ? e.touches[0] : e; player.tx = t.clientX; player.ty = t.clientY; };
+    window.addEventListener('mousemove', getPos); window.addEventListener('touchstart', getPos); window.addEventListener('touchmove', getPos);
+
+    document.getElementById('startBtn').onclick = () => {
+        document.getElementById('menuScreen').classList.add('hidden');
+        state = 'PLAY'; score = 0; enemies = [];
+        player.x = player.tx = canvas.width/2; player.y = player.ty = canvas.height/2;
+    };
+
+    function loop() {
+        ctx.fillStyle = 'black'; ctx.fillRect(0,0,canvas.width,canvas.height);
+        if(state === 'PLAY') {
+            score += 0.15;
+            if(Math.random() < 0.07) enemies.push({x: Math.random()*canvas.width, y: -20, s: 5+Math.random()*6});
+            player.x += (player.tx - player.x) * 0.12; player.y += (player.ty - player.y) * 0.12;
+            
+            ctx.fillStyle = '#00f3ff'; ctx.beginPath(); ctx.arc(player.x, player.y, 12, 0, 7); ctx.fill();
+            
+            for(let i=enemies.length-1; i>=0; i--) {
+                enemies[i].y += enemies[i].s;
+                ctx.fillStyle = '#ff0055'; ctx.fillRect(enemies[i].x, enemies[i].y, 20, 20);
+                if(Math.hypot(player.x-enemies[i].x, player.y-enemies[i].y) < 22) {
                     state = 'WAIT';
-                    updateDoc(doc(db, "players", userUID), { score: score }).catch(e => log(e.message));
+                    if(score > (profile.score || 0)) updateDoc(doc(db, "players", profile.uid), {score: score});
                     document.getElementById('menuScreen').classList.remove('hidden');
                 }
             }
-            requestAnimationFrame(loop);
+            ctx.fillStyle = 'white'; ctx.font = "20px Orbitron"; ctx.fillText("SCORE: "+Math.floor(score), 20, 40);
         }
-        loop();
-
-    } catch(e) { log("Erreur init: " + e.message); }
+        requestAnimationFrame(loop);
+    }
+    loop();
 </script>
 </body>
 </html>
