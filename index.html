@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NEON VORTEX - AUTH SYSTÈME</title>
+    <title>NEON VORTEX - ARCADE</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap');
         :root { --primary: #00f3ff; --secondary: #ff0055; --bg: #050505; }
@@ -11,167 +11,145 @@
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: var(--bg); font-family: 'Orbitron', sans-serif; color: white; }
         canvas { display: block; position: absolute; top: 0; left: 0; }
         
-        .overlay { position: absolute; inset: 0; background: rgba(5,5,5,0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; text-align: center; padding: 20px; }
+        .overlay { position: absolute; inset: 0; background: rgba(5,5,5,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; text-align: center; }
         .hidden { display: none !important; }
         
-        h1 { font-size: 2.2rem; background: linear-gradient(to right, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 20px; }
+        h1 { font-size: 2.5rem; background: linear-gradient(to right, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 10px; filter: drop-shadow(0 0 10px rgba(0, 243, 255, 0.5)); }
         
-        input { background: #111; border: 1px solid var(--primary); color: white; padding: 12px; text-align: center; font-family: 'Orbitron'; margin-bottom: 10px; width: 250px; outline: none; }
-        input:focus { box-shadow: 0 0 10px var(--primary); }
+        button { padding: 18px 40px; font-family: 'Orbitron'; font-weight: 900; background: var(--primary); border: none; cursor: pointer; color: #000; clip-path: polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%); font-size: 1.1rem; }
         
-        .btn-group { display: flex; gap: 10px; margin-top: 10px; }
-        button { padding: 15px 25px; font-family: 'Orbitron'; font-weight: 900; background: var(--primary); border: none; cursor: pointer; color: #000; clip-path: polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%); transition: 0.3s; }
-        button:active { transform: scale(0.95); }
-        .btn-sec { background: var(--secondary); color: white; }
-        
-        #leaderboard { margin-top: 20px; border: 1px solid var(--primary); padding: 10px; width: 280px; background: rgba(0, 243, 255, 0.05); }
-        .row { display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding: 8px 0; font-size: 0.9rem; }
-        #errorMsg { color: var(--secondary); font-size: 0.8rem; margin-top: 10px; height: 20px; }
+        .stats { margin-top: 25px; padding: 15px; border-top: 1px solid #333; width: 200px; }
+        .best-label { color: var(--secondary); font-size: 0.8rem; letter-spacing: 2px; }
+        .best-score { font-size: 1.5rem; color: #fff; display: block; }
     </style>
 </head>
 <body>
 
 <canvas id="gameCanvas"></canvas>
 
-<div id="authScreen" class="overlay">
+<div id="menuScreen" class="overlay">
     <h1>NEON VORTEX</h1>
-    <input type="text" id="userPseudo" placeholder="TON PSEUDO" maxlength="12">
-    <input type="password" id="userPass" placeholder="MOT DE PASSE">
-    <div class="btn-group">
-        <button id="signUpBtn">S'INSCRIRE</button>
-        <button id="loginBtn" class="btn-sec">CONNEXION</button>
+    <button id="startBtn">START MISSION</button>
+    <div class="stats">
+        <span class="best-label">RECORD PERSONNEL</span>
+        <span id="bestScoreDisplay" class="best-score">0</span>
     </div>
-    <div id="errorMsg"></div>
 </div>
 
-<div id="menuScreen" class="overlay hidden">
-    <h1 id="welcome">AGENTS</h1>
-    <button id="startBtn">DÉMARRER LA MISSION</button>
-    <div id="leaderboard">
-        <div style="color:var(--primary); margin-bottom:10px; font-weight:bold; letter-spacing: 2px;">TOP MONDIAL</div>
-        <div id="scores">Chargement...</div>
-    </div>
-    <button id="logoutBtn" style="margin-top:20px; font-size: 10px; padding: 5px 10px; background: #333; color: #999;">DÉCONNEXION</button>
-</div>
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const menuScreen = document.getElementById('menuScreen');
+    const startBtn = document.getElementById('startBtn');
+    const bestDisplay = document.getElementById('bestScoreDisplay');
 
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-    import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, limit, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    let state = 'MENU';
+    let score = 0;
+    // On récupère le record enregistré dans le téléphone
+    let highscore = localStorage.getItem('neonVortex_highscore') || 0;
+    bestDisplay.innerText = Math.floor(highscore);
 
-    // Config officielle
-    const firebaseConfig = {
-        apiKey: "AIzaSyBBvuAx9E3M-zwGDrhZZkc",
-        authDomain: "neon-vortex-d3d36.firebaseapp.com",
-        projectId: "neon-vortex-d3d36",
-        storageBucket: "neon-vortex-d3d36.firebasestorage.app",
-        messagingSenderId: "15753332231",
-        appId: "1:15753332231:web:e08828b766ec8287e08828"
+    let player = { x: 0, y: 0, tx: 0, ty: 0, r: 12 };
+    let enemies = [];
+
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // Contrôles tactiles et souris
+    const handleMove = (e) => {
+        const t = e.touches ? e.touches[0] : e;
+        player.tx = t.clientX;
+        player.ty = t.clientY;
+    };
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('touchmove', handleMove);
+
+    startBtn.onclick = () => {
+        state = 'PLAY';
+        score = 0;
+        enemies = [];
+        player.x = player.tx = canvas.width / 2;
+        player.y = player.ty = canvas.height / 2;
+        menuScreen.classList.add('hidden');
     };
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth();
-    const db = getFirestore();
-    let profile = { pseudo: "", score: 0, uid: "" };
-
-    const errorMsg = document.getElementById('errorMsg');
-
-    // --- SYSTÈME DE COMPTE ---
-
-    // S'inscrire
-    document.getElementById('signUpBtn').onclick = async () => {
-        const pseudo = document.getElementById('userPseudo').value.trim();
-        const pass = document.getElementById('userPass').value;
-        if(pseudo.length < 3) return errorMsg.innerText = "Pseudo trop court !";
-        
-        try {
-            // On transforme le pseudo en email fictif pour Firebase
-            const res = await createUserWithEmailAndPassword(auth, pseudo + "@vortex.com", pass);
-            await setDoc(doc(db, "players", res.user.uid), { pseudo: pseudo, score: 0 });
-            errorMsg.style.color = "lime";
-            errorMsg.innerText = "Compte créé ! Connecte-toi.";
-        } catch (e) { errorMsg.innerText = "Erreur : Ce pseudo existe déjà ou mot de passe trop court."; }
-    };
-
-    // Se connecter
-    document.getElementById('loginBtn').onclick = async () => {
-        const pseudo = document.getElementById('userPseudo').value.trim();
-        const pass = document.getElementById('userPass').value;
-        try {
-            await signInWithEmailAndPassword(auth, pseudo + "@vortex.com", pass);
-        } catch (e) { errorMsg.innerText = "Pseudo ou mot de passe incorrect."; }
-    };
-
-    // Surveiller l'état de connexion
-    onAuthStateChanged(auth, async (user) => {
-        if (user) {
-            const snap = await getDoc(doc(db, "players", user.uid));
-            if (snap.exists()) {
-                profile = { ...snap.data(), uid: user.uid };
-                document.getElementById('authScreen').classList.add('hidden');
-                showMenu();
-            }
-        } else {
-            document.getElementById('authScreen').classList.remove('hidden');
-            document.getElementById('menuScreen').classList.add('hidden');
-        }
-    });
-
-    document.getElementById('logoutBtn').onclick = () => signOut(auth);
-
-    function showMenu() {
-        document.getElementById('menuScreen').classList.remove('hidden');
-        document.getElementById('welcome').innerText = "AGENT: " + profile.pseudo;
-        
-        const q = query(collection(db, "players"), orderBy("score", "desc"), limit(5));
-        onSnapshot(q, (snap) => {
-            const list = document.getElementById('scores');
-            list.innerHTML = "";
-            snap.forEach(d => {
-                const p = d.data();
-                list.innerHTML += `<div class="row"><span>${p.pseudo}</span><span>${Math.floor(p.score)}</span></div>`;
-            });
+    function spawnEnemy() {
+        enemies.push({
+            x: Math.random() * canvas.width,
+            y: -50,
+            w: 20 + Math.random() * 20,
+            h: 20 + Math.random() * 20,
+            speed: 5 + Math.random() * 5 + (score / 100) // La vitesse augmente avec le score
         });
     }
 
-    // --- LOGIQUE DU JEU ---
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-    let enemies = [], player = { x: 0, y: 0, tx: 0, ty: 0 }, score = 0, state = 'WAIT';
-
-    function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-    window.addEventListener('resize', resize); resize();
-    const getPos = (e) => { const t = e.touches ? e.touches[0] : e; player.tx = t.clientX; player.ty = t.clientY; };
-    window.addEventListener('mousemove', getPos); window.addEventListener('touchstart', getPos); window.addEventListener('touchmove', getPos);
-
-    document.getElementById('startBtn').onclick = () => {
-        document.getElementById('menuScreen').classList.add('hidden');
-        state = 'PLAY'; score = 0; enemies = [];
-        player.x = player.tx = canvas.width/2; player.y = player.ty = canvas.height/2;
-    };
-
     function loop() {
-        ctx.fillStyle = 'black'; ctx.fillRect(0,0,canvas.width,canvas.height);
-        if(state === 'PLAY') {
-            score += 0.15;
-            if(Math.random() < 0.07) enemies.push({x: Math.random()*canvas.width, y: -20, s: 5+Math.random()*6});
-            player.x += (player.tx - player.x) * 0.12; player.y += (player.ty - player.y) * 0.12;
-            
-            ctx.fillStyle = '#00f3ff'; ctx.beginPath(); ctx.arc(player.x, player.y, 12, 0, 7); ctx.fill();
-            
-            for(let i=enemies.length-1; i>=0; i--) {
-                enemies[i].y += enemies[i].s;
-                ctx.fillStyle = '#ff0055'; ctx.fillRect(enemies[i].x, enemies[i].y, 20, 20);
-                if(Math.hypot(player.x-enemies[i].x, player.y-enemies[i].y) < 22) {
-                    state = 'WAIT';
-                    if(score > (profile.score || 0)) updateDoc(doc(db, "players", profile.uid), {score: score});
-                    document.getElementById('menuScreen').classList.remove('hidden');
+        // Fond noir profond
+        ctx.fillStyle = '#050505';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        if (state === 'PLAY') {
+            score += 0.2;
+
+            // Déplacement fluide
+            player.x += (player.tx - player.x) * 0.15;
+            player.y += (player.ty - player.y) * 0.15;
+
+            // Dessin du joueur avec halo néon
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = '#00f3ff';
+            ctx.fillStyle = '#00f3ff';
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.r, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // Gestion des ennemis
+            if (Math.random() < 0.08) spawnEnemy();
+
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                let e = enemies[i];
+                e.y += e.speed;
+
+                // Dessin ennemi
+                ctx.fillStyle = '#ff0055';
+                ctx.fillRect(e.x, e.y, e.w, e.h);
+
+                // Collision (Hitbox simplifiée)
+                if (player.x + player.r > e.x && 
+                    player.x - player.r < e.x + e.w && 
+                    player.y + player.r > e.y && 
+                    player.y - player.r < e.y + e.h) {
+                    
+                    gameOver();
                 }
+
+                // Supprimer si hors écran
+                if (e.y > canvas.height) enemies.splice(i, 1);
             }
-            ctx.fillStyle = 'white'; ctx.font = "20px Orbitron"; ctx.fillText("SCORE: "+Math.floor(score), 20, 40);
+
+            // Score en haut à gauche
+            ctx.fillStyle = 'white';
+            ctx.font = '900 20px Orbitron';
+            ctx.fillText(Math.floor(score), 25, 40);
         }
         requestAnimationFrame(loop);
     }
+
+    function gameOver() {
+        state = 'MENU';
+        if (score > highscore) {
+            highscore = score;
+            localStorage.setItem('neonVortex_highscore', highscore);
+        }
+        bestDisplay.innerText = Math.floor(highscore);
+        menuScreen.classList.remove('hidden');
+    }
+
     loop();
 </script>
 </body>
