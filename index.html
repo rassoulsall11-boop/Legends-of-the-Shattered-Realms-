@@ -1,39 +1,40 @@
 ```html
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NEON HORIZON: INFINITY LOOP</title>
+    <title>NEXUS: FLUX HORIZON [2026 Edition]</title>
     <style>
         :root {
-            --primary: #00f3ff;
-            --danger: #ff0055;
-            --gold: #ffd700;
-            --bg: #050505;
-            --ui-font: 'Segoe UI', 'Roboto', monospace;
+            --neon-blue: #00f3ff;
+            --neon-pink: #ff0055;
+            --neon-gold: #ffd700;
+            --bg-dark: #050505;
+            --hud-font: 'Courier New', Courier, monospace;
         }
 
-        body, html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            background-color: var(--bg);
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
+
+        body {
+            background-color: var(--bg-dark);
             overflow: hidden;
-            font-family: var(--ui-font);
-            user-select: none;
-            -webkit-user-select: none;
+            font-family: var(--hud-font);
+            color: white;
+            height: 100vh;
+            width: 100vw;
+            cursor: crosshair;
         }
 
-        #gameCanvas {
+        #game-layer {
             position: absolute;
             top: 0;
             left: 0;
             z-index: 1;
+            filter: contrast(1.2) brightness(1.1);
         }
 
-        /* HUD LAYER */
+        /* UI Overlay - Glassmorphism */
         #ui-layer {
             position: absolute;
             top: 0;
@@ -45,544 +46,616 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            padding: 20px;
-            box-sizing: border-box;
+            padding: 2rem;
         }
 
-        .hud-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            text-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
-        }
-
-        .stat-box {
-            background: rgba(0, 0, 0, 0.6);
-            border-left: 4px solid var(--primary);
-            padding: 10px 20px;
-            backdrop-filter: blur(4px);
-            color: #fff;
-            transform: skewX(-10deg);
-        }
-
-        .stat-label { font-size: 0.8rem; color: #aaa; }
-        .stat-value { font-size: 1.5rem; font-weight: 800; color: var(--primary); }
-        .danger-text { color: var(--danger); border-color: var(--danger); }
-
-        /* MENU OVERLAY */
-        #menu-overlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(5, 5, 5, 0.85);
-            z-index: 20;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
+        .hud-element {
+            text-shadow: 0 0 10px var(--neon-blue);
+            opacity: 0.9;
             pointer-events: auto;
-            backdrop-filter: blur(10px);
-            transition: opacity 0.3s;
         }
+
+        #score-display { font-size: 2rem; font-weight: bold; letter-spacing: 2px; }
+        #level-display { color: var(--neon-gold); font-size: 1.2rem; }
+
+        /* Menu Screens */
+        .modal {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(10, 10, 15, 0.85);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 3rem;
+            text-align: center;
+            border-radius: 4px;
+            box-shadow: 0 0 50px rgba(0, 243, 255, 0.1);
+            pointer-events: auto;
+            transition: opacity 0.3s ease;
+            display: none;
+        }
+
+        .modal.active { display: block; animation: fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
 
         h1 {
-            color: #fff;
-            font-size: 4rem;
-            margin: 0;
-            text-transform: uppercase;
-            letter-spacing: 10px;
-            background: linear-gradient(90deg, var(--primary), #fff, var(--primary));
+            font-size: 3rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(90deg, #fff, var(--neon-blue));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            animation: glitch 2s infinite;
+            text-transform: uppercase;
+            letter-spacing: 5px;
         }
 
+        p { color: #aaa; margin-bottom: 2rem; font-size: 0.9rem; line-height: 1.5; }
+
         .btn {
-            margin-top: 40px;
-            padding: 15px 50px;
             background: transparent;
-            border: 2px solid var(--primary);
-            color: var(--primary);
-            font-size: 1.2rem;
+            border: 1px solid var(--neon-blue);
+            color: var(--neon-blue);
+            padding: 1rem 3rem;
+            font-size: 1rem;
+            font-family: inherit;
             text-transform: uppercase;
-            letter-spacing: 4px;
+            letter-spacing: 3px;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.2s ease;
             position: relative;
             overflow: hidden;
         }
 
         .btn:hover {
-            background: var(--primary);
-            color: #000;
-            box-shadow: 0 0 30px var(--primary);
+            background: var(--neon-blue);
+            color: var(--bg-dark);
+            box-shadow: 0 0 30px var(--neon-blue);
         }
 
-        .hidden { opacity: 0; pointer-events: none; }
+        .btn:active { transform: scale(0.98); }
 
-        @keyframes glitch {
-            0% { text-shadow: 2px 2px var(--danger), -2px -2px var(--primary); }
-            50% { text-shadow: -2px -2px var(--danger), 2px 2px var(--primary); }
-            100% { text-shadow: 2px 2px var(--danger), -2px -2px var(--primary); }
+        /* Scanline Effect */
+        .scanlines {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.1));
+            background-size: 100% 4px;
+            z-index: 20;
+            pointer-events: none;
+            opacity: 0.3;
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translate(-50%, -40%); }
+            to { opacity: 1; transform: translate(-50%, -50%); }
         }
     </style>
 </head>
 <body>
 
-    <!-- RENDERING ENGINE -->
-    <canvas id="gameCanvas"></canvas>
+    <!-- Rendering Layer -->
+    <canvas id="game-layer"></canvas>
+    <div class="scanlines"></div>
 
-    <!-- UI INTERFACE -->
+    <!-- UI Layer -->
     <div id="ui-layer">
         <div class="hud-top">
-            <div class="stat-box">
-                <div class="stat-label">NIVEAU</div>
-                <div class="stat-value" id="hud-level">1</div>
-            </div>
-            <div class="stat-box" style="border-color: var(--gold)">
-                <div class="stat-label">SCORE</div>
-                <div class="stat-value" id="hud-score">0</div>
-            </div>
-            <div class="stat-box danger-text">
-                <div class="stat-label">INTÉGRITÉ</div>
-                <div class="stat-value" id="hud-health">100%</div>
-            </div>
+            <div id="score-display">000000</div>
+            <div id="level-display">SECTOR: 01</div>
+        </div>
+        <div class="hud-bottom">
+            <div id="save-status" style="font-size: 0.8rem; color: #555;">SYSTEM: ONLINE</div>
         </div>
     </div>
 
-    <!-- MENUS -->
-    <div id="menu-overlay">
-        <h1 id="menu-title">NEON HORIZON</h1>
-        <p style="color: #aaa; margin-top: 10px; font-size: 1.2rem;" id="menu-subtitle">ÉVITER. SURVIVRE. ÉVOLUER.</p>
-        <button class="btn" id="start-btn" onclick="GameManager.start()">INITIALISER SYSTÈME</button>
-        <p style="color: #555; margin-top: 30px; font-size: 0.8rem;">DONNÉES SAUVEGARDÉES AUTOMATIQUEMENT</p>
+    <!-- Menus -->
+    <div id="start-screen" class="modal active">
+        <h1>Flux Horizon</h1>
+        <p>NEURAL LINK ESTABLISHED.<br>AVOID ENTITIES. ABSORB ENERGY. SURVIVE.</p>
+        <p style="color: var(--neon-gold); font-size: 0.8rem;" id="high-score-display">BEST SECTOR: 01</p>
+        <button class="btn" onclick="Game.start()">INITIALIZE</button>
     </div>
 
-    <script>
-    /**
-     * TRIPLE-A SYNTHESIS ENGINE v4.0
-     * Core Logic: Object Pooling, Vectors, State Machine
-     */
+    <div id="game-over-screen" class="modal">
+        <h1 style="color: var(--neon-pink);">CRITICAL FAILURE</h1>
+        <p>SYSTEM INTEGRITY LOST.</p>
+        <div id="final-score" style="margin-bottom: 1.5rem; font-size: 1.5rem;">SCORE: 0</div>
+        <button class="btn" onclick="Game.restart()">REBOOT SYSTEM</button>
+    </div>
 
-    // --- MATH & UTILS MODULE ---
-    const MathLib = {
-        lerp: (a, b, t) => a + (b - a) * t,
-        clamp: (val, min, max) => Math.min(Math.max(val, min), max),
-        randRange: (min, max) => Math.random() * (max - min) + min,
-        distSq: (x1, y1, x2, y2) => (x2 - x1) ** 2 + (y2 - y1) ** 2,
+<script>
+/**
+ * NEXUS ARCHITECT v4.0 - INDUSTRIAL GRADE GAME ENGINE
+ * PATTERNS: Singleton, Object Pooling, Component-Entity (Lite), Observer, State Machine
+ * OPTIMIZATION: Pre-allocation, Bitwise rendering, RequestAnimationFrame Loop
+ */
+
+// --- CONSTANTS & CONFIG ---
+const CFG = {
+    PARTICLE_LIMIT: 300,
+    ENEMY_LIMIT: 100,
+    FRICTION: 0.94,
+    PLAYER_SPEED: 0.8,
+    BASE_ENEMY_SPEED: 2,
+    DIFFICULTY_SCALING: 1.15, // Exponential difficulty
+    SAVE_KEY: 'NEXUS_FLUX_V1_SAVE'
+};
+
+// --- UTILS ---
+const Maths = {
+    lerp: (a, b, t) => a + (b - a) * t,
+    dist: (x1, y1, x2, y2) => Math.hypot(x2 - x1, y2 - y1),
+    rand: (min, max) => Math.random() * (max - min) + min,
+    clamp: (val, min, max) => Math.min(Math.max(val, min), max)
+};
+
+// --- STORAGE MANAGER (PERSISTENCE) ---
+class StorageManager {
+    static save(data) {
+        try {
+            const payload = btoa(JSON.stringify(data)); // Simple encoding
+            localStorage.setItem(CFG.SAVE_KEY, payload);
+        } catch (e) { console.error("Save Failed", e); }
+    }
+
+    static load() {
+        try {
+            const raw = localStorage.getItem(CFG.SAVE_KEY);
+            if (!raw) return { highScore: 0, maxLevel: 1 };
+            return JSON.parse(atob(raw));
+        } catch (e) { return { highScore: 0, maxLevel: 1 }; }
+    }
+}
+
+// --- OBJECT POOLING (MEMORY OPTIMIZATION) ---
+class Pool {
+    constructor(createFn, maxSize) {
+        this.pool = [];
+        this.createFn = createFn;
+        for (let i = 0; i < maxSize; i++) this.pool.push(createFn());
+    }
+    
+    get() {
+        return this.pool.length > 0 ? this.pool.pop() : this.createFn();
+    }
+    
+    release(obj) {
+        this.pool.push(obj);
+    }
+}
+
+// --- ENTITIES ---
+class Entity {
+    constructor() {
+        this.active = false;
+        this.x = 0; this.y = 0;
+        this.vx = 0; this.vy = 0;
+        this.radius = 0;
+        this.color = '#fff';
+        this.trail = [];
+    }
+
+    reset(x, y) {
+        this.x = x; this.y = y;
+        this.vx = 0; this.vy = 0;
+        this.active = true;
+        this.trail = [];
+    }
+
+    update(dt) {
+        if (!this.active) return;
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
         
-        // Système de vecteurs optimisé (mutations directes pour éviter le GC)
-        Vec2: class {
-            constructor(x = 0, y = 0) { this.x = x; this.y = y; }
-            set(x, y) { this.x = x; this.y = y; return this; }
-            add(v) { this.x += v.x; this.y += v.y; return this; }
-            sub(v) { this.x -= v.x; this.y -= v.y; return this; }
-            mult(s) { this.x *= s; this.y *= s; return this; }
-            mag() { return Math.sqrt(this.x * this.x + this.y * this.y); }
-            normalize() {
-                let m = this.mag();
-                if (m > 0) this.mult(1 / m);
-                return this;
-            }
-        }
-    };
-
-    // --- PERSISTENCE MODULE (SAVE SYSTEM) ---
-    const SaveManager = {
-        KEY: 'NEON_HORIZON_SAVE_V1',
-        data: {
-            level: 1,
-            highScore: 0,
-            xp: 0
-        },
-        save() {
-            try {
-                localStorage.setItem(this.KEY, JSON.stringify(this.data));
-            } catch (e) { console.warn("Storage unavailable"); }
-        },
-        load() {
-            const saved = localStorage.getItem(this.KEY);
-            if (saved) {
-                const parsed = JSON.parse(saved);
-                this.data = { ...this.data, ...parsed };
-                // On reset le niveau courant pour le challenge, mais on garde le highscore
-                // Pour cet exercice, on va reprendre au niveau sauvegardé (Progression)
-            }
-            return this.data;
-        },
-        resetProgress() {
-            this.data.level = 1;
-            this.data.xp = 0;
-            this.save();
-        }
-    };
-
-    // --- POOLING SYSTEM (MEMORY MANAGEMENT) ---
-    class ObjectPool {
-        constructor(createFn, initialSize = 50) {
-            this.createFn = createFn;
-            this.pool = [];
-            this.active = [];
-            for (let i = 0; i < initialSize; i++) this.pool.push(this.createFn());
-        }
-
-        get() {
-            let obj = this.pool.length > 0 ? this.pool.pop() : this.createFn();
-            this.active.push(obj);
-            obj.active = true;
-            if (obj.onSpawn) obj.onSpawn();
-            return obj;
-        }
-
-        release(obj) {
-            const index = this.active.indexOf(obj);
-            if (index > -1) {
-                this.active.splice(index, 1);
-                obj.active = false;
-                this.pool.push(obj);
-            }
-        }
-
-        updateAll(dt, context) {
-            // Boucle inverse pour suppression sûre
-            for (let i = this.active.length - 1; i >= 0; i--) {
-                const obj = this.active[i];
-                obj.update(dt);
-                if (!obj.active) { // Auto-release logic inside update
-                    this.release(obj);
-                } else {
-                    obj.draw(context);
-                }
-            }
-        }
-        
-        clear() {
-            while(this.active.length > 0) {
-                this.release(this.active[0]);
-            }
+        // Trail Logic
+        if (Game.frame % 3 === 0) {
+            this.trail.push({x: this.x, y: this.y, alpha: 1.0});
+            if (this.trail.length > 10) this.trail.shift();
         }
     }
 
-    // --- GAME ENTITIES ---
+    render(ctx) {
+        if (!this.active) return;
+        
+        // Render Trail
+        ctx.beginPath();
+        for (let i = 0; i < this.trail.length; i++) {
+            const t = this.trail[i];
+            t.alpha -= 0.05;
+            ctx.fillStyle = this.color + Math.floor(t.alpha * 255).toString(16).padStart(2,'0'); // Hex alpha hack
+            ctx.fillRect(t.x - 1, t.y - 1, 2, 2);
+        }
+        
+        // Render Core
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = this.color;
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+    }
+}
 
-    // SYSTEME DE PARTICULES (VISUAL FX)
-    class Particle {
-        constructor() {
-            this.pos = new MathLib.Vec2();
-            this.vel = new MathLib.Vec2();
-            this.life = 0;
-            this.maxLife = 0;
-            this.color = '#fff';
-            this.size = 2;
-            this.active = false;
-        }
-        onSpawn() {}
-        update(dt) {
-            this.life -= dt;
-            this.pos.add(new MathLib.Vec2(this.vel.x, this.vel.y).mult(dt));
-            this.size *= 0.95; // Shrink
-            if (this.life <= 0 || this.size < 0.1) this.active = false;
-        }
-        draw(ctx) {
-            ctx.globalAlpha = this.life / this.maxLife;
-            ctx.fillStyle = this.color;
-            ctx.beginPath();
-            ctx.arc(this.pos.x, this.pos.y, this.size, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.globalAlpha = 1;
-        }
+class Player extends Entity {
+    constructor() {
+        super();
+        this.radius = 8;
+        this.color = '#00f3ff';
+        this.hp = 100;
     }
 
-    // JOUEUR (THE CORE)
-    const Player = {
-        pos: new MathLib.Vec2(),
-        targetPos: new MathLib.Vec2(),
-        velocity: new MathLib.Vec2(),
-        radius: 15,
-        health: 100,
-        color: '#00f3ff',
-        trailTimer: 0,
-        
-        init() {
-            this.pos.set(window.innerWidth/2, window.innerHeight/2);
-            this.targetPos.set(this.pos.x, this.pos.y);
-            this.health = 100;
-        },
+    update(dt, input) {
+        // Physics based movement
+        if (input.keys['ArrowUp'] || input.keys['w']) this.vy -= CFG.PLAYER_SPEED;
+        if (input.keys['ArrowDown'] || input.keys['s']) this.vy += CFG.PLAYER_SPEED;
+        if (input.keys['ArrowLeft'] || input.keys['a']) this.vx -= CFG.PLAYER_SPEED;
+        if (input.keys['ArrowRight'] || input.keys['d']) this.vx += CFG.PLAYER_SPEED;
 
-        update(dt) {
-            // Mouvement fluide (Lerp avec inertie)
-            const speed = 8.0; // Réactivité
-            this.pos.x = MathLib.lerp(this.pos.x, this.targetPos.x, dt * speed);
-            this.pos.y = MathLib.lerp(this.pos.y, this.targetPos.y, dt * speed);
+        // Mouse influence
+        const dx = input.mouse.x - this.x;
+        const dy = input.mouse.y - this.y;
+        this.vx += dx * 0.002;
+        this.vy += dy * 0.002;
 
-            // Contraintes écran
-            this.pos.x = MathLib.clamp(this.pos.x, this.radius, window.innerWidth - this.radius);
-            this.pos.y = MathLib.clamp(this.pos.y, this.radius, window.innerHeight - this.radius);
+        this.vx *= CFG.FRICTION;
+        this.vy *= CFG.FRICTION;
 
-            // Génération de traînée (Visual Juice)
-            this.trailTimer += dt;
-            if (this.trailTimer > 0.05) {
-                this.trailTimer = 0;
-                GameManager.spawnParticle(this.pos.x, this.pos.y, '#00f3ff', 0);
-            }
-        },
+        // Boundary constraint
+        this.x = Maths.clamp(this.x, this.radius, Game.width - this.radius);
+        this.y = Maths.clamp(this.y, this.radius, Game.height - this.radius);
 
-        draw(ctx) {
-            // Glow Effect
-            ctx.shadowBlur = 20;
-            ctx.shadowColor = this.color;
-            
-            // Core
-            ctx.strokeStyle = this.color;
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.arc(this.pos.x, this.pos.y, this.radius, 0, Math.PI * 2);
-            ctx.stroke();
+        super.update(dt);
+    }
+}
 
-            // Inner Core (Health indicator)
-            ctx.fillStyle = `rgba(0, 243, 255, ${this.health / 100})`;
-            ctx.beginPath();
-            ctx.arc(this.pos.x, this.pos.y, this.radius * 0.6, 0, Math.PI * 2);
-            ctx.fill();
-            
-            ctx.shadowBlur = 0; // Reset pour perf
-        },
-        
-        hit(damage) {
-            this.health -= damage;
-            GameManager.shake(5); // Screen shake
-            GameManager.spawnExplosion(this.pos.x, this.pos.y, 10, '#ff0055');
-            if (this.health <= 0) GameManager.gameOver();
-            UI.updateHealth(this.health);
-        }
-    };
-
-    // ENNEMIS (Procedural Attributes)
-    class Enemy {
-        constructor() {
-            this.pos = new MathLib.Vec2();
-            this.vel = new MathLib.Vec2();
-            this.active = false;
-            this.type = 0; // 0: Follower, 1: Dasher
-            this.speed = 0;
-            this.radius = 10;
-        }
-
-        onSpawn() {
-            // Spawn hors écran aléatoire
-            const angle = Math.random() * Math.PI * 2;
-            const dist = Math.max(window.innerWidth, window.innerHeight) * 0.7;
-            this.pos.x = (window.innerWidth/2) + Math.cos(angle) * dist;
-            this.pos.y = (window.innerHeight/2) + Math.sin(angle) * dist;
-            
-            // Difficulté progressive basée sur le niveau
-            const levelMult = 1 + (GameManager.level * 0.15);
-            
-            this.type = Math.random() > 0.8 ? 1 : 0;
-            this.speed = (MathLib.randRange(100, 200) * levelMult);
-            this.radius = this.type === 1 ? 8 : 12;
-            this.color = this.type === 1 ? '#ffcc00' : '#ff0055';
-        }
-
-        update(dt) {
-            // Logique de poursuite
-            let dir = new MathLib.Vec2(Player.pos.x - this.pos.x, Player.pos.y - this.pos.y).normalize();
-            
-            if (this.type === 1) { 
-                // Dasher: mouvement saccadé
-                this.speed += Math.sin(Date.now() / 100) * 5;
-            }
-
-            this.pos.add(dir.mult(this.speed * dt));
-
-            // Collision Joueur
-            const dist = MathLib.distSq(this.pos.x, this.pos.y, Player.pos.x, Player.pos.y);
-            const rSum = this.radius + Player.radius;
-            if (dist < rSum * rSum) {
-                Player.hit(20);
-                this.active = false; // Suicide
-            }
-
-            // Hors limites (nettoyage si trop loin)
-            if (Math.abs(this.pos.x - window.innerWidth/2) > window.innerWidth) this.active = false;
-        }
-
-        draw(ctx) {
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = this.color;
-            ctx.fillStyle = this.color;
-            
-            ctx.beginPath();
-            if (this.type === 0) {
-                ctx.arc(this.pos.x, this.pos.y, this.radius, 0, Math.PI * 2);
-            } else {
-                // Triangle pour les dashers
-                ctx.moveTo(this.pos.x + this.radius, this.pos.y);
-                ctx.lineTo(this.pos.x - this.radius, this.pos.y - this.radius);
-                ctx.lineTo(this.pos.x - this.radius, this.pos.y + this.radius);
-            }
-            ctx.fill();
-            ctx.shadowBlur = 0;
-        }
+class Enemy extends Entity {
+    constructor() {
+        super();
+        this.type = 0; // 0: Chaser, 1: Dasher
     }
 
-    // --- MAIN GAME MANAGER (SINGLETON) ---
-    const GameManager = {
-        canvas: document.getElementById('gameCanvas'),
-        ctx: document.getElementById('gameCanvas').getContext('2d', { alpha: false }), // Alpha false pour perf
-        
-        state: 'MENU', // MENU, PLAYING, GAMEOVER
-        lastTime: 0,
-        accumulator: 0,
-        
-        level: 1,
-        score: 0,
-        scoreBuffer: 0, // Pour le level up
-        
-        enemyPool: null,
-        particlePool: null,
-        
-        spawnTimer: 0,
-        shakeTime: 0,
+    init(x, y, level) {
+        this.reset(x, y);
+        this.type = Math.random() > 0.7 ? 1 : 0;
+        this.radius = this.type === 1 ? 6 : 10;
+        this.color = this.type === 1 ? '#ff0055' : '#ffaa00';
+        this.speed = (CFG.BASE_ENEMY_SPEED + (level * 0.2)) * (this.type === 1 ? 1.5 : 1);
+    }
 
-        init() {
-            this.resize();
-            window.addEventListener('resize', () => this.resize());
-            
-            // Input Handling
-            window.addEventListener('mousemove', e => {
-                Player.targetPos.set(e.clientX, e.clientY);
-            });
-            window.addEventListener('touchmove', e => {
-                e.preventDefault();
-                Player.targetPos.set(e.touches[0].clientX, e.touches[0].clientY);
-            }, { passive: false });
+    update(dt, player) {
+        if (!this.active) return;
+        
+        const angle = Math.atan2(player.y - this.y, player.x - this.x);
+        
+        if (this.type === 0) {
+            // Chaser: Smooth follow
+            this.vx += Math.cos(angle) * 0.15;
+            this.vy += Math.sin(angle) * 0.15;
+        } else {
+            // Dasher: Erratic bursts
+            if (Game.frame % 60 === 0) {
+                this.vx = Math.cos(angle) * this.speed * 5;
+                this.vy = Math.sin(angle) * this.speed * 5;
+            }
+        }
+        
+        this.vx *= 0.96;
+        this.vy *= 0.96;
 
-            // Init Pools
-            this.enemyPool = new ObjectPool(() => new Enemy(), 100);
-            this.particlePool = new ObjectPool(() => new Particle(), 200);
+        super.update(dt);
+    }
+}
 
-            // Load Data
-            const saved = SaveManager.load();
-            this.highScore = saved.highScore || 0;
-            
-            // Start Loop
-            requestAnimationFrame(t => this.loop(t));
-        },
+class Particle extends Entity {
+    init(x, y, color) {
+        this.reset(x, y);
+        this.color = color;
+        this.radius = Maths.rand(1, 3);
+        const ang = Maths.rand(0, Math.PI * 2);
+        const spd = Maths.rand(2, 8);
+        this.vx = Math.cos(ang) * spd;
+        this.vy = Math.sin(ang) * spd;
+        this.life = 1.0;
+    }
 
-        start() {
-            const saved = SaveManager.load();
-            
-            // Si on recommence après un game over, on reset le level
-            if(this.state === 'GAMEOVER') {
-                 SaveManager.resetProgress();
-                 this.level = 1;
+    update(dt) {
+        if (!this.active) return;
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+        this.vx *= 0.9;
+        this.vy *= 0.9;
+        this.life -= 0.02 * dt;
+        
+        if (this.life <= 0) this.active = false;
+    }
+
+    render(ctx) {
+        if (!this.active) return;
+        ctx.globalAlpha = this.life;
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x, this.y, this.radius, this.radius);
+        ctx.globalAlpha = 1.0;
+    }
+}
+
+// --- ENGINE CORE ---
+const Game = {
+    canvas: null,
+    ctx: null,
+    width: 0,
+    height: 0,
+    running: false,
+    frame: 0,
+    score: 0,
+    level: 1,
+    savedData: null,
+    
+    player: null,
+    enemies: [],
+    particles: [],
+    
+    pools: {
+        enemies: null,
+        particles: null
+    },
+
+    input: {
+        keys: {},
+        mouse: { x: 0, y: 0 }
+    },
+
+    init() {
+        this.canvas = document.getElementById('game-layer');
+        this.ctx = this.canvas.getContext('2d', { alpha: false }); // Optimize
+        
+        // Pools
+        this.pools.enemies = new Pool(() => new Enemy(), CFG.ENEMY_LIMIT);
+        this.pools.particles = new Pool(() => new Particle(), CFG.PARTICLE_LIMIT);
+        
+        // Listeners
+        window.addEventListener('resize', () => this.resize());
+        window.addEventListener('keydown', e => this.input.keys[e.key] = true);
+        window.addEventListener('keyup', e => this.input.keys[e.key] = false);
+        window.addEventListener('mousemove', e => {
+            this.input.mouse.x = e.clientX;
+            this.input.mouse.y = e.clientY;
+        });
+        window.addEventListener('touchmove', e => {
+            this.input.mouse.x = e.touches[0].clientX;
+            this.input.mouse.y = e.touches[0].clientY;
+            e.preventDefault();
+        }, {passive: false});
+
+        this.resize();
+        this.loadSave();
+        this.renderMenuBg();
+    },
+
+    loadSave() {
+        this.savedData = StorageManager.load();
+        document.getElementById('high-score-display').innerText = 
+            `MAX SECTOR REACHED: ${this.savedData.maxLevel} // RECORD: ${this.savedData.highScore}`;
+    },
+
+    resize() {
+        this.width = window.innerWidth;
+        this.height = window.innerHeight;
+        this.canvas.width = this.width;
+        this.canvas.height = this.height;
+        // Re-center player if off screen
+        if (this.player) {
+            this.player.x = this.width / 2;
+            this.player.y = this.height / 2;
+        }
+    },
+
+    start() {
+        document.getElementById('start-screen').classList.remove('active');
+        document.getElementById('game-over-screen').classList.remove('active');
+        
+        this.player = new Player();
+        this.player.x = this.width / 2;
+        this.player.y = this.height / 2;
+        
+        this.score = 0;
+        this.level = 1; // Start easy
+        this.enemies = [];
+        this.particles = [];
+        this.running = true;
+        
+        // Difficulty Jump based on save, but start slightly lower to build momentum
+        // If player reached level 10, start at level 5
+        const startBoost = Math.floor(this.savedData.maxLevel / 2);
+        if (startBoost > 1) {
+            this.level = startBoost;
+            this.score = (this.level - 1) * 1000;
+        }
+
+        this.lastTime = performance.now();
+        requestAnimationFrame(loop);
+        
+        this.updateHUD();
+    },
+
+    restart() {
+        this.start();
+    },
+
+    spawnEnemy() {
+        // Spawn logic based on level
+        const spawnChance = 0.02 + (this.level * 0.005);
+        if (Math.random() < spawnChance) {
+            const enemy = this.pools.enemies.get();
+            // Spawn on edges
+            if (Math.random() < 0.5) {
+                enemy.init(Math.random() < 0.5 ? 0 : this.width, Math.random() * this.height, this.level);
             } else {
-                 this.level = saved.level || 1;
+                enemy.init(Math.random() * this.width, Math.random() < 0.5 ? 0 : this.height, this.level);
             }
+            this.enemies.push(enemy);
+        }
+    },
 
-            this.score = 0;
-            this.scoreBuffer = 0;
-            Player.init();
-            
-            this.enemyPool.clear();
-            this.particlePool.clear();
-            
-            this.state = 'PLAYING';
-            UI.hideMenu();
-            UI.updateHUD();
-        },
+    spawnExplosion(x, y, color) {
+        for (let i = 0; i < 10; i++) {
+            const p = this.pools.particles.get();
+            p.init(x, y, color);
+            this.particles.push(p);
+        }
+    },
 
-        resize() {
-            this.canvas.width = window.innerWidth;
-            this.canvas.height = window.innerHeight;
-        },
+    update(dt) {
+        // Player
+        this.player.update(dt, this.input);
 
-        loop(timestamp) {
-            const dt = (timestamp - this.lastTime) / 1000;
-            this.lastTime = timestamp;
+        // Level scaling
+        if (this.score > this.level * 1000) {
+            this.level++;
+            this.showFloatingText("SECTOR " + this.level + " REACHED");
+            this.updateHUD();
+        }
 
-            if (this.state === 'PLAYING') {
-                this.update(Math.min(dt, 0.1)); // Cap dt pour éviter les sauts
-                this.draw();
-            } else {
-                // Dessiner un fond animé même dans le menu
-                this.drawBackground();
+        this.spawnEnemy();
+
+        // Enemies
+        for (let i = this.enemies.length - 1; i >= 0; i--) {
+            const e = this.enemies[i];
+            e.update(dt, this.player);
+
+            // Collision Player vs Enemy
+            const dist = Maths.dist(this.player.x, this.player.y, e.x, e.y);
+            if (dist < this.player.radius + e.radius) {
+                this.gameOver();
             }
-
-            requestAnimationFrame(t => this.loop(t));
-        },
-
-        update(dt) {
-            // Difficulty Manager
-            // Plus le niveau est haut, plus ça spawn vite
-            const spawnRate = Math.max(0.1, 1.0 - (this.level * 0.08));
             
-            this.spawnTimer += dt;
-            if (this.spawnTimer > spawnRate) {
-                this.spawnTimer = 0;
-                this.enemyPool.get();
+            // Bounds cleanup
+            if (e.x < -50 || e.x > this.width + 50 || e.y < -50 || e.y > this.height + 50) {
+                e.active = false;
+                this.pools.enemies.release(e);
+                this.enemies.splice(i, 1);
             }
+        }
 
-            // Score passivement incrémenté + Level System
-            this.score += dt * 100;
-            this.scoreBuffer += dt * 100;
-            
-            // Courbe de difficulté exponentielle
-            const xpNeed = 1000 * Math.pow(1.2, this.level);
-            
-            if (this.scoreBuffer >= xpNeed) {
-                this.levelUp();
+        // Particles
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+            const p = this.particles[i];
+            p.update(dt);
+            if (!p.active) {
+                this.pools.particles.release(p);
+                this.particles.splice(i, 1);
             }
+        }
+        
+        // Passive Score
+        this.score++;
+        if (this.frame % 30 === 0) this.updateHUD();
+        this.frame++;
+    },
 
-            Player.update(dt);
-            this.enemyPool.updateAll(dt, this.ctx);
-            this.particlePool.updateAll(dt, this.ctx);
-            
-            if (this.shakeTime > 0) this.shakeTime -= dt;
+    render() {
+        // Clear with fade for trails
+        this.ctx.fillStyle = 'rgba(5, 5, 5, 0.4)';
+        this.ctx.fillRect(0, 0, this.width, this.height);
 
-            UI.updateScore(Math.floor(this.score));
-        },
+        // Grid Background Effect (Retro-Future)
+        this.renderGrid();
 
-        draw() {
-            // Screen Shake Transform
-            this.ctx.save();
-            if (this.shakeTime > 0) {
-                const mag = 5 * (this.shakeTime);
-                const dx = (Math.random() - 0.5) * mag;
-                const dy = (Math.random() - 0.5) * mag;
-                this.ctx.translate(dx, dy);
-            }
+        // Entities
+        this.ctx.globalCompositeOperation = 'lighter'; // Neon Bloom
+        
+        this.player.render(this.ctx);
+        this.enemies.forEach(e => e.render(this.ctx));
+        this.particles.forEach(p => p.render(this.ctx));
 
-            this.drawBackground();
-            
-            // Grid Effect (Cyberpunk aesthetic)
-            this.drawGrid();
+        this.ctx.globalCompositeOperation = 'source-over';
+    },
 
-            Player.draw(this.ctx);
-            // Enemies & Particles sont dessinés dans leur updateAll pour optimisation
-            
-            this.ctx.restore();
-        },
+    renderGrid() {
+        this.ctx.strokeStyle = 'rgba(0, 243, 255, 0.05)';
+        this.ctx.lineWidth = 1;
+        const cellSize = 50;
+        const offsetX = (this.frame * 0.5) % cellSize;
+        const offsetY = (this.frame * 0.5) % cellSize;
 
-        drawBackground() {
-            // Clear avec un léger fade pour effet de traînée globale
-            this.ctx.fillStyle = 'rgba(5, 5, 5, 0.3)';
-            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-        },
+        this.ctx.beginPath();
+        for (let x = -offsetX; x < this.width; x += cellSize) {
+            this.ctx.moveTo(x, 0);
+            this.ctx.lineTo(x, this.height);
+        }
+        for (let y = -offsetY; y < this.height; y += cellSize) {
+            this.ctx.moveTo(0, y);
+            this.ctx.lineTo(this.width, y);
+        }
+        this.ctx.stroke();
+    },
 
-        drawGrid() {
-            this.ctx.strokeStyle = 'rgba(0, 243, 255, 0.05)';
-            this.ctx.lineWidth = 1;
-            const gridSize = 50;
-            
-            // Effet de mouvement de la grille
-            const offset = (Date.now() / 50) % gridSize;
+    renderMenuBg() {
+        // Static background for menu
+        this.ctx.fillStyle = '#050505';
+        this.ctx.fillRect(0, 0, this.width, this.height);
+        this.renderGrid();
+    },
 
-            this.ctx.beginPath();
-            for (let x = offset; x < this.canvas.width; x += gridSize) {
-                this.ctx.moveTo(x, 0);
-                this.ctx.lineTo(x, this.canvas.height);
-            }
-         
+    updateHUD() {
+        document.getElementById('score-display').innerText = this.score.toString().padStart(6, '0');
+        document.getElementById('level-display').innerText = `SECTOR: ${this.level.toString().padStart(2, '0')}`;
+    },
+
+    showFloatingText(text) {
+        const el = document.createElement('div');
+        el.innerText = text;
+        el.style.position = 'absolute';
+        el.style.left = '50%';
+        el.style.top = '30%';
+        el.style.transform = 'translate(-50%, -50%)';
+        el.style.color = '#fff';
+        el.style.fontSize = '2rem';
+        el.style.fontWeight = 'bold';
+        el.style.textShadow = '0 0 20px var(--neon-blue)';
+        el.style.transition = 'all 1s ease';
+        document.getElementById('ui-layer').appendChild(el);
+        
+        setTimeout(() => {
+            el.style.top = '25%';
+            el.style.opacity = '0';
+        }, 50);
+        setTimeout(() => el.remove(), 1000);
+    },
+
+    gameOver() {
+        this.running = false;
+        
+        // Visual impact
+        this.spawnExplosion(this.player.x, this.player.y, '#fff');
+        
+        // Shake Effect
+        this.canvas.style.transform = `translate(${Maths.rand(-10,10)}px, ${Maths.rand(-10,10)}px)`;
+        setTimeout(() => this.canvas.style.transform = 'none', 200);
+
+        // Save Data
+        if (this.score > this.savedData.highScore) this.savedData.highScore = this.score;
+        if (this.level > this.savedData.maxLevel) this.savedData.maxLevel = this.level;
+        StorageManager.save(this.savedData);
+
+        // UI
+        setTimeout(() => {
+            document.getElementById('game-over-screen').classList.add('active');
+            document.getElementById('final-score').innerText = `FINAL SCORE: ${this.score}`;
+            document.getElementById('save-status').innerText = "DATA SAVED TO NEURAL CLOUD";
+        }, 500);
+    }
+};
+
+// --- GAME LOOP ---
+let lastTime = 0;
+function loop(timestamp) {
+    if (!Game.running) return;
+    
+    // Delta time calculation (Limit max dt to prevent jumps)
+    const dt = Math.min((timestamp - lastTime) / 16.67, 2); 
+    lastTime = timestamp;
+
+    Game.update(dt);
+    Game.render();
+
+    requestAn
