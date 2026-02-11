@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NEON VORTEX: LEGENDARY</title>
+    <title>NEON VORTEX: FINAL FIX</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
         :root { --primary: #00f3ff; --secondary: #ff0055; --orange: #ff9800; --green: #00ff88; --bg: #050505; --ui-font: 'Orbitron', sans-serif; }
@@ -11,23 +11,30 @@
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: var(--bg); font-family: var(--ui-font); }
         canvas { display: block; width: 100%; height: 100%; }
         
-        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; pointer-events: none; padding: 20px; display: flex; justify-content: space-between; z-index: 10; }
-        .hud-item { color: white; text-shadow: 0 0 10px var(--primary); font-size: 1rem; pointer-events: none; }
-        .btn { padding: 10px 20px; background: rgba(255,255,255,0.05); border: 1px solid var(--primary); color: white; cursor: pointer; pointer-events: auto; font-family: var(--ui-font); font-size: 0.8rem; transition: 0.2s; z-index: 15; }
+        /* Couche Interface : on s'assure qu'elle ne bloque pas le jeu */
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; pointer-events: none; padding: 15px; display: flex; justify-content: space-between; align-items: flex-start; z-index: 100; }
+        .hud-item { color: white; text-shadow: 0 0 10px var(--primary); font-size: 0.9rem; pointer-events: none; background: rgba(0,0,0,0.3); padding: 5px 10px; border-radius: 5px; }
+        
+        .controls { display: flex; gap: 10px; pointer-events: auto; }
+        .btn { padding: 10px 15px; background: rgba(5, 5, 5, 0.8); border: 1px solid var(--primary); color: white; cursor: pointer; font-family: var(--ui-font); font-size: 0.7rem; transition: 0.2s; }
         .btn:hover { background: var(--primary); color: black; box-shadow: 0 0 15px var(--primary); }
 
-        #menu-overlay, #game-over { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 5, 5, 0.95); backdrop-filter: blur(20px); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 20; }
+        /* Overlays */
+        #menu-overlay, #game-over { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 5, 5, 0.9); backdrop-filter: blur(15px); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 200; }
         .hidden { display: none !important; }
-        h1 { font-size: 3.5rem; margin: 0; background: linear-gradient(45deg, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-transform: uppercase; text-align: center; letter-spacing: 5px; }
         
-        #countdown { position: absolute; font-size: 10rem; color: var(--orange); font-weight: 900; z-index: 30; text-shadow: 0 0 50px var(--orange); pointer-events: none; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+        h1 { font-size: 3rem; margin: 0; background: linear-gradient(45deg, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-transform: uppercase; text-align: center; }
+        #countdown { position: absolute; font-size: 10rem; color: var(--orange); font-weight: 900; z-index: 300; text-shadow: 0 0 50px var(--orange); pointer-events: none; top: 50%; left: 50%; transform: translate(-50%, -50%); }
     </style>
 </head>
 <body>
 
 <div id="ui-layer">
     <div class="hud-item">LVL: <span id="lvl-txt">1</span> | SCORE: <span id="score-txt">0</span></div>
-    <button class="btn" id="pause-btn">⏸ PAUSE</button>
+    <div class="controls">
+        <button class="btn" id="pause-btn">⏸ PAUSE</button>
+        <button class="btn" style="border-color: #666;" onclick="location.reload()">🏠 MENU</button>
+    </div>
 </div>
 
 <div id="countdown" class="hidden">5</div>
@@ -39,7 +46,7 @@
         MAX LVL: <span id="best-lvl" style="color: var(--primary)">1</span>
     </div>
     <div style="display: flex; flex-direction: column; gap: 15px;">
-        <button class="btn" id="start-btn" style="font-size: 1.2rem; padding: 15px 40px;">NOUVELLE SYNTHÈSE</button>
+        <button class="btn" id="start-btn" style="font-size: 1.1rem; padding: 15px 40px;">NOUVELLE SYNTHÈSE</button>
         <button class="btn hidden" id="resume-btn" style="border-color: var(--orange); color: var(--orange);">REPRENDRE LVL <span id="resume-lvl-val">1</span></button>
     </div>
 </div>
@@ -47,7 +54,7 @@
 <div id="game-over" class="hidden">
     <h1 style="background: var(--secondary); -webkit-background-clip: text;">ÉCHEC SYSTÈME</h1>
     <h2 id="final-score" style="color:white; margin: 20px 0;">Score: 0</h2>
-    <button class="btn" onclick="location.reload()">RETOUR MENU</button>
+    <button class="btn" onclick="location.reload()" style="font-size: 1.2rem; padding: 15px 40px;">REESSAYER</button>
 </div>
 
 <canvas id="canvas"></canvas>
@@ -61,11 +68,10 @@ const GAME = {
     score: 0, level: 1, levelTimer: 0,
     enemies: [], powerups: [],
     player: { x: 0, y: 0, tx: 0, ty: 0, shield: 0 },
-    nextPowerUpTime: Date.now() + 1800000, // 30 min
+    nextPowerUpTime: Date.now() + 1800000,
     lastTime: 0
 };
 
-// --- CLASSES ---
 class PowerUp {
     constructor() {
         this.x = Math.random() * (canvas.width - 100) + 50;
@@ -75,17 +81,14 @@ class PowerUp {
     draw() {
         ctx.fillStyle = '#00ff88';
         ctx.shadowBlur = 20; ctx.shadowColor = '#00ff88';
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, 15 + Math.sin(Date.now()*0.01)*5, 0, Math.PI*2);
-        ctx.fill();
+        ctx.beginPath(); ctx.arc(this.x, this.y, 15 + Math.sin(Date.now()*0.01)*5, 0, Math.PI*2); ctx.fill();
         ctx.shadowBlur = 0;
     }
 }
 
 class Enemy {
     constructor(type, level) {
-        this.type = type;
-        this.active = true;
+        this.type = type; this.active = true;
         this.speed = (150 + (level * 20)) * (type === 'orange' ? 0.75 : 1.1);
         this.lifeTime = 10;
         const side = Math.floor(Math.random() * 4);
@@ -94,8 +97,7 @@ class Enemy {
         else if(side === 2) { this.x = Math.random()*canvas.width; this.y = canvas.height+30; }
         else { this.x = -30; this.y = Math.random()*canvas.height; }
         const angle = Math.atan2(GAME.player.y - this.y, GAME.player.x - this.x);
-        this.vx = Math.cos(angle) * this.speed;
-        this.vy = Math.sin(angle) * this.speed;
+        this.vx = Math.cos(angle) * this.speed; this.vy = Math.sin(angle) * this.speed;
     }
     update(dt) {
         if(this.type === 'red') {
@@ -103,15 +105,12 @@ class Enemy {
             if(this.x < -100 || this.x > canvas.width+100 || this.y < -100 || this.y > canvas.height+100) this.active = false;
         } else {
             const angle = Math.atan2(GAME.player.y - this.y, GAME.player.x - this.x);
-            this.x += Math.cos(angle) * this.speed * dt;
-            this.y += Math.sin(angle) * this.speed * dt;
-            this.lifeTime -= dt;
-            if(this.lifeTime <= 0) this.active = false;
+            this.x += Math.cos(angle) * this.speed * dt; this.y += Math.sin(angle) * this.speed * dt;
+            this.lifeTime -= dt; if(this.lifeTime <= 0) this.active = false;
         }
     }
 }
 
-// --- LOGIQUE PRINCIPALE ---
 function init() {
     window.addEventListener('resize', () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; });
     window.dispatchEvent(new Event('resize'));
@@ -135,18 +134,19 @@ function init() {
 }
 
 function loadStats() {
-    document.getElementById('best-score').innerText = localStorage.getItem('vortex_score') || 0;
+    const s = localStorage.getItem('vortex_score') || 0;
     const l = localStorage.getItem('vortex_lvl') || 1;
+    document.getElementById('best-score').innerText = s;
     document.getElementById('best-lvl').innerText = l;
-    if(l > 1) { 
+    if(parseInt(l) > 1) { 
         document.getElementById('resume-btn').classList.remove('hidden'); 
         document.getElementById('resume-lvl-val').innerText = l; 
     }
 }
 
 function saveGame() {
-    const s = localStorage.getItem('vortex_score') || 0;
-    const l = localStorage.getItem('vortex_lvl') || 1;
+    const s = parseInt(localStorage.getItem('vortex_score') || 0);
+    const l = parseInt(localStorage.getItem('vortex_lvl') || 1);
     if(GAME.score > s) localStorage.setItem('vortex_score', Math.floor(GAME.score));
     if(GAME.level > l) localStorage.setItem('vortex_lvl', GAME.level);
 }
@@ -159,6 +159,7 @@ function start(lvl) {
     GAME.state = 'PLAYING';
     document.getElementById('menu-overlay').classList.add('hidden');
     document.getElementById('game-over').classList.add('hidden');
+    document.getElementById('start-btn').innerText = "NOUVELLE SYNTHÈSE";
 }
 
 function togglePause() {
@@ -197,7 +198,6 @@ function update(dt) {
     GAME.levelTimer += dt;
     if(GAME.levelTimer > 10) { GAME.level++; GAME.levelTimer = 0; saveGame(); }
 
-    // Spawn Bonus 30 min
     let now = Date.now();
     if(now > GAME.nextPowerUpTime && GAME.powerups.length === 0) {
         GAME.powerups.push(new PowerUp());
@@ -205,7 +205,6 @@ function update(dt) {
         setTimeout(() => { GAME.powerups = []; }, 10000);
     }
 
-    // Spawn Ennemis
     if(Math.random() < (0.015 + GAME.level * 0.008)) {
         const type = (GAME.level >= 3 && Math.random() > 0.85) ? 'orange' : 'red';
         GAME.enemies.push(new Enemy(type, GAME.level));
@@ -215,11 +214,9 @@ function update(dt) {
     GAME.player.y += (GAME.player.ty - GAME.player.y) * 0.15;
     if(GAME.player.shield > 0) GAME.player.shield -= dt;
 
-    // Collisions
     GAME.powerups.forEach((p, i) => {
         if(Math.hypot(GAME.player.x - p.x, GAME.player.y - p.y) < 30) {
-            GAME.player.shield = 3;
-            GAME.powerups.splice(i, 1);
+            GAME.player.shield = 3; GAME.powerups.splice(i, 1);
         }
     });
 
@@ -230,8 +227,7 @@ function update(dt) {
         if(dist < 18) {
             if(GAME.player.shield > 0) { e.active = false; GAME.score += 50; }
             else { 
-                GAME.state = 'GAMEOVER'; 
-                saveGame();
+                GAME.state = 'GAMEOVER'; saveGame();
                 document.getElementById('game-over').classList.remove('hidden');
                 document.getElementById('final-score').innerText = "SCORE: " + Math.floor(GAME.score);
             }
