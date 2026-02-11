@@ -1,148 +1,47 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NEON VORTEX</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap');
-        :root { --primary: #00f3ff; --secondary: #ff0055; --bg: #050505; }
-        * { box-sizing: border-box; user-select: none; touch-action: none; }
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: var(--bg); font-family: 'Orbitron', sans-serif; color: white; }
-        canvas { display: block; position: absolute; top: 0; left: 0; }
-        .overlay { position: absolute; width: 100%; height: 100%; background: rgba(5,5,5,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; text-align: center; }
-        .hidden { display: none !important; }
-        h1 { font-size: 2.2rem; background: linear-gradient(to right, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 20px; }
-        button { margin: 10px; padding: 15px 30px; font-family: 'Orbitron'; font-weight: 900; background: var(--primary); border: none; cursor: pointer; color: #000; clip-path: polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%); }
-        #leaderboard { margin-top: 20px; border: 1px solid var(--primary); padding: 10px; width: 260px; background: rgba(0, 243, 255, 0.05); }
-        .row { display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding: 5px 0; font-size: 0.8rem; }
-        input { background: #111; border: 1px solid var(--primary); color: white; padding: 12px; text-align: center; font-family: 'Orbitron'; margin-bottom: 10px; width: 200px; }
-    </style>
+    <title>DIAGNOSTIC NEON VORTEX</title>
+    <style>body{background:#000;color:#0f0;font-family:monospace;padding:20px;}</style>
 </head>
 <body>
+    <h2>ÉTAT DU SYSTÈME :</h2>
+    <div id="status">Initialisation...</div>
+    <button id="btn" style="display:none; padding:20px; margin-top:20px;">TESTER CONNEXION GOOGLE</button>
 
-<canvas id="gameCanvas"></canvas>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, signInWithRedirect, GoogleAuthProvider, getRedirectResult } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-<div id="authScreen" class="overlay">
-    <h1>NEON VORTEX</h1>
-    <button id="loginBtn" style="background:#db4437; color:white;">CONNEXION GOOGLE</button>
-</div>
+        const config = {
+            apiKey: "AIzaSyBBvuAx9E3M-zwGDrhZZkc",
+            authDomain: "neon-vortex-d3d36.firebaseapp.com",
+            projectId: "neon-vortex-d3d36",
+            appId: "1:15753332231:web:e08828b766ec8287e08828"
+        };
 
-<div id="pseudoScreen" class="overlay hidden">
-    <h1>NOM DE CODE</h1>
-    <input type="text" id="pseudoInput" placeholder="Ton Pseudo..." maxlength="12">
-    <button id="saveBtn">CONFIRMER</button>
-</div>
+        const status = document.getElementById('status');
+        const btn = document.getElementById('btn');
 
-<div id="menuScreen" class="overlay hidden">
-    <h1 id="welcome">IDENTIFIÉ</h1>
-    <button id="startBtn">DÉMARRER</button>
-    <div id="leaderboard">
-        <div style="color:var(--primary); margin-bottom:10px; font-weight:bold;">TOP 5 MONDIAL</div>
-        <div id="scores">Chargement des scores...</div>
-    </div>
-</div>
+        try {
+            const app = initializeApp(config);
+            const auth = getAuth(app);
+            const provider = new GoogleAuthProvider();
+            status.innerHTML = "✅ Firebase initialisé.<br>En attente du clic sur le bouton...";
+            btn.style.display = "block";
 
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getAuth, signInWithRedirect, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-    import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, limit, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+            btn.onclick = () => {
+                status.innerHTML = "🔄 Redirection vers Google...";
+                signInWithRedirect(auth, provider);
+            };
 
-    // Tes configurations officielles
-    const firebaseConfig = {
-        apiKey: "AIzaSyBBvuAx9E3M-zwGDrhZZkc",
-        authDomain: "neon-vortex-d3d36.firebaseapp.com",
-        projectId: "neon-vortex-d3d36",
-        storageBucket: "neon-vortex-d3d36.firebasestorage.app",
-        messagingSenderId: "15753332231",
-        appId: "1:15753332231:web:e08828b766ec8287e08828"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth();
-    const db = getFirestore();
-    const provider = new GoogleAuthProvider();
-    let profile = { score: 0 };
-
-    document.getElementById('loginBtn').onclick = () => signInWithRedirect(auth, provider);
-
-    onAuthStateChanged(auth, async (user) => {
-        if (user) {
-            document.getElementById('authScreen').classList.add('hidden');
-            const snap = await getDoc(doc(db, "players", user.uid));
-            if (!snap.exists()) {
-                document.getElementById('pseudoScreen').classList.remove('hidden');
-                profile.uid = user.uid;
-            } else {
-                profile = { ...snap.data(), uid: user.uid };
-                showMenu();
-            }
-        }
-    });
-
-    document.getElementById('saveBtn').onclick = async () => {
-        const name = document.getElementById('pseudoInput').value.trim();
-        if(name.length >= 3) {
-            profile.pseudo = name;
-            await setDoc(doc(db, "players", profile.uid), { pseudo: name, score: 0 });
-            document.getElementById('pseudoScreen').classList.add('hidden');
-            showMenu();
-        }
-    };
-
-    function showMenu() {
-        document.getElementById('menuScreen').classList.remove('hidden');
-        document.getElementById('welcome').innerText = "AGENT: " + profile.pseudo;
-        
-        // Branchement en temps réel au classement
-        const q = query(collection(db, "players"), orderBy("score", "desc"), limit(5));
-        onSnapshot(q, (snap) => {
-            const list = document.getElementById('scores');
-            list.innerHTML = "";
-            snap.forEach(d => {
-                const p = d.data();
-                list.innerHTML += `<div class="row"><span>${p.pseudo}</span><span>${Math.floor(p.score)}</span></div>`;
+            getRedirectResult(auth).catch(e => {
+                status.innerHTML = "❌ ERREUR : " + e.message;
             });
-        });
-    }
 
-    // --- JEU ---
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-    let enemies = [], player = { x: 0, y: 0, tx: 0, ty: 0 }, score = 0, state = 'WAIT';
-
-    function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-    window.addEventListener('resize', resize); resize();
-    const pos = (e) => { const t = e.touches ? e.touches[0] : e; player.tx = t.clientX; player.ty = t.clientY; };
-    window.addEventListener('mousemove', pos); window.addEventListener('touchstart', pos); window.addEventListener('touchmove', pos);
-
-    document.getElementById('startBtn').onclick = () => {
-        document.getElementById('menuScreen').classList.add('hidden');
-        state = 'PLAY'; score = 0; enemies = [];
-        player.x = player.tx = canvas.width/2; player.y = player.ty = canvas.height/2;
-    };
-
-    function loop(t) {
-        ctx.fillStyle = 'black'; ctx.fillRect(0,0,canvas.width,canvas.height);
-        if(state === 'PLAY') {
-            score += 0.2;
-            if(Math.random() < 0.05) enemies.push({x: Math.random()*canvas.width, y: -20, s: 4+Math.random()*4});
-            player.x += (player.tx - player.x) * 0.1; player.y += (player.ty - player.y) * 0.1;
-            ctx.fillStyle = '#00f3ff'; ctx.beginPath(); ctx.arc(player.x, player.y, 12, 0, 7); ctx.fill();
-            for(let i=enemies.length-1; i>=0; i--) {
-                enemies[i].y += enemies[i].s;
-                ctx.fillStyle = '#ff0055'; ctx.fillRect(enemies[i].x, enemies[i].y, 18, 18);
-                if(Math.hypot(player.x-enemies[i].x, player.y-enemies[i].y) < 22) {
-                    state = 'WAIT';
-                    if(score > (profile.score || 0)) updateDoc(doc(db, "players", profile.uid), {score: score});
-                    document.getElementById('menuScreen').classList.remove('hidden');
-                }
-            }
-            ctx.fillStyle = 'white'; ctx.font = "20px Orbitron"; ctx.fillText("SCORE: "+Math.floor(score), 20, 40);
+        } catch(e) {
+            status.innerHTML = "❌ ERREUR INIT : " + e.message;
         }
-        requestAnimationFrame(loop);
-    }
-    loop();
-</script>
+    </script>
 </body>
 </html>
