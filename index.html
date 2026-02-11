@@ -1,47 +1,136 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
-    <title>DIAGNOSTIC NEON VORTEX</title>
-    <style>body{background:#000;color:#0f0;font-family:monospace;padding:20px;}</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NEON VORTEX</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap');
+        body { margin: 0; background: #050505; color: white; font-family: 'Orbitron', sans-serif; overflow: hidden; }
+        .overlay { position: absolute; inset: 0; background: rgba(5,5,5,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; }
+        .hidden { display: none !important; }
+        button { padding: 15px 30px; background: #00f3ff; border: none; font-family: 'Orbitron'; font-weight: 900; cursor: pointer; margin: 10px; }
+        #debug { position: absolute; bottom: 10px; left: 10px; font-size: 10px; color: #ff0055; pointer-events: none; }
+        input { padding: 12px; background: #111; border: 1px solid #00f3ff; color: white; text-align: center; font-family: 'Orbitron'; }
+    </style>
 </head>
 <body>
-    <h2>ÉTAT DU SYSTÈME :</h2>
-    <div id="status">Initialisation...</div>
-    <button id="btn" style="display:none; padding:20px; margin-top:20px;">TESTER CONNEXION GOOGLE</button>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, signInWithRedirect, GoogleAuthProvider, getRedirectResult } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+<canvas id="gameCanvas"></canvas>
+<div id="debug">Système prêt...</div>
 
-        const config = {
-            apiKey: "AIzaSyBBvuAx9E3M-zwGDrhZZkc",
-            authDomain: "neon-vortex-d3d36.firebaseapp.com",
-            projectId: "neon-vortex-d3d36",
-            appId: "1:15753332231:web:e08828b766ec8287e08828"
+<div id="authScreen" class="overlay">
+    <h1 style="color:#00f3ff">NEON VORTEX</h1>
+    <button id="loginBtn" style="background:#db4437; color:white;">CONNEXION GOOGLE</button>
+</div>
+
+<div id="pseudoScreen" class="overlay hidden">
+    <h1>TON PSEUDO</h1>
+    <input type="text" id="pseudoInput" placeholder="..." maxlength="12">
+    <button id="saveBtn">VALIDER</button>
+</div>
+
+<div id="menuScreen" class="overlay hidden">
+    <h1 id="welcome" style="color:#ff0055">AGENTS</h1>
+    <button id="startBtn">JOUER</button>
+    <div id="leaderboard" style="border:1px solid #00f3ff; padding:10px; width:250px; margin-top:20px;">
+        <div id="scores">Chargement du classement...</div>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, signInWithRedirect, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, limit, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyBBvuAx9E3M-zwGDrhZZkc",
+        authDomain: "neon-vortex-d3d36.firebaseapp.com",
+        projectId: "neon-vortex-d3d36",
+        storageBucket: "neon-vortex-d3d36.firebasestorage.app",
+        messagingSenderId: "15753332231",
+        appId: "1:15753332231:web:e08828b766ec8287e08828"
+    };
+
+    const log = (msg) => document.getElementById('debug').innerText = msg;
+
+    try {
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const provider = new GoogleAuthProvider();
+        let userUID = null;
+
+        document.getElementById('loginBtn').onclick = () => signInWithRedirect(auth, provider);
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                userUID = user.uid;
+                document.getElementById('authScreen').classList.add('hidden');
+                log("Utilisateur connecté !");
+                
+                const userDoc = await getDoc(doc(db, "players", user.uid)).catch(e => log("Erreur Firestore: " + e.message));
+                if (userDoc && userDoc.exists()) {
+                    showMenu(userDoc.data().pseudo);
+                } else {
+                    document.getElementById('pseudoScreen').classList.remove('hidden');
+                }
+            }
+        });
+
+        document.getElementById('saveBtn').onclick = async () => {
+            const p = document.getElementById('pseudoInput').value.trim();
+            if(p.length > 2) {
+                await setDoc(doc(db, "players", userUID), { pseudo: p, score: 0 });
+                document.getElementById('pseudoScreen').classList.add('hidden');
+                showMenu(p);
+            }
         };
 
-        const status = document.getElementById('status');
-        const btn = document.getElementById('btn');
-
-        try {
-            const app = initializeApp(config);
-            const auth = getAuth(app);
-            const provider = new GoogleAuthProvider();
-            status.innerHTML = "✅ Firebase initialisé.<br>En attente du clic sur le bouton...";
-            btn.style.display = "block";
-
-            btn.onclick = () => {
-                status.innerHTML = "🔄 Redirection vers Google...";
-                signInWithRedirect(auth, provider);
-            };
-
-            getRedirectResult(auth).catch(e => {
-                status.innerHTML = "❌ ERREUR : " + e.message;
+        function showMenu(name) {
+            document.getElementById('menuScreen').classList.remove('hidden');
+            document.getElementById('welcome').innerText = name;
+            const q = query(collection(db, "players"), orderBy("score", "desc"), limit(5));
+            onSnapshot(q, (snap) => {
+                let html = "";
+                snap.forEach(d => html += `<div style="display:flex; justify-content:space-between"><span>${d.data().pseudo}</span><span>${Math.floor(d.data().score)}</span></div>`);
+                document.getElementById('scores').innerHTML = html;
             });
-
-        } catch(e) {
-            status.innerHTML = "❌ ERREUR INIT : " + e.message;
         }
-    </script>
+
+        // --- MINI JEU ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let state = 'WAIT', score = 0, px = 0, py = 0;
+        canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+
+        document.getElementById('startBtn').onclick = () => {
+            document.getElementById('menuScreen').classList.add('hidden');
+            state = 'PLAY'; score = 0;
+        };
+
+        window.onmousemove = window.ontouchmove = (e) => {
+            const t = e.touches ? e.touches[0] : e;
+            px = t.clientX; py = t.clientY;
+        };
+
+        function loop() {
+            ctx.fillStyle = 'black'; ctx.fillRect(0,0,canvas.width,canvas.height);
+            if(state === 'PLAY') {
+                score += 0.1;
+                ctx.fillStyle = '#00f3ff'; ctx.beginPath(); ctx.arc(px, py, 15, 0, 7); ctx.fill();
+                ctx.fillText("SCORE: " + Math.floor(score), 20, 30);
+                if(score > 50) { // Test fin de jeu rapide
+                    state = 'WAIT';
+                    updateDoc(doc(db, "players", userUID), { score: score }).catch(e => log(e.message));
+                    document.getElementById('menuScreen').classList.remove('hidden');
+                }
+            }
+            requestAnimationFrame(loop);
+        }
+        loop();
+
+    } catch(e) { log("Erreur init: " + e.message); }
+</script>
 </body>
 </html>
