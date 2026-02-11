@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NEON VORTEX: PROGRESSIVE</title>
+    <title>NEON VORTEX: PERSISTENCE</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
         :root { --primary: #00f3ff; --secondary: #ff0055; --orange: #ff9800; --bg: #050505; --ui-font: 'Orbitron', sans-serif; }
@@ -15,13 +15,16 @@
         .hud-item { color: white; text-shadow: 0 0 10px var(--primary); font-size: 1.1rem; }
         .hud-item span { color: var(--primary); font-weight: 900; }
         
-        .btn { padding: 10px 20px; background: rgba(255,255,255,0.1); border: 1px solid var(--primary); color: white; cursor: pointer; pointer-events: auto; font-family: var(--ui-font); font-size: 0.8rem; transition: 0.3s; }
+        .btn { padding: 10px 20px; background: rgba(255,255,255,0.1); border: 1px solid var(--primary); color: white; cursor: pointer; pointer-events: auto; font-family: var(--ui-font); font-size: 0.8rem; transition: 0.3s; margin: 5px; }
         .btn:hover { background: var(--primary); color: black; }
 
         #menu-overlay, #game-over { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 5, 5, 0.9); backdrop-filter: blur(15px); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 20; }
         .hidden { display: none !important; }
-        h1 { font-size: 3rem; margin: 0; background: linear-gradient(to right, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-transform: uppercase; }
+        h1 { font-size: 3rem; margin: 0; background: linear-gradient(to right, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-transform: uppercase; text-align: center; }
         
+        .stats-box { color: #888; margin: 20px 0; text-align: center; font-size: 0.9rem; }
+        .stats-box b { color: var(--primary); }
+
         #countdown { position: absolute; font-size: 10rem; color: var(--orange); font-weight: 900; z-index: 30; text-shadow: 0 0 40px var(--orange); pointer-events: none; }
     </style>
 </head>
@@ -36,17 +39,22 @@
 <div id="countdown" class="hidden">5</div>
 
 <div id="menu-overlay">
-    <h1 id="menu-title">NEON VORTEX</h1>
-    <p style="color: #666; text-align: center;">Difficulté progressive :<br>Survivez pour augmenter le niveau.</p>
-    <button class="btn" id="start-btn" style="font-size: 1.5rem; margin-top: 20px;">COMMENCER</button>
-    <button class="btn" onclick="location.href='index.html'" style="margin-top: 15px; border-color: #444;">RETOUR ACCUEIL</button>
+    <h1>NEON VORTEX</h1>
+    <div class="stats-box">
+        RECORD SCORE: <b id="best-score">0</b><br>
+        NIVEAU MAX ATTEINT: <b id="best-level">1</b>
+    </div>
+    <div style="display: flex; gap: 10px;">
+        <button class="btn" id="start-btn" style="font-size: 1.2rem;">NOUVELLE SYNTHÈSE</button>
+        <button class="btn hidden" id="resume-btn" style="font-size: 1.2rem; border-color: var(--orange); color: var(--orange);">REPRENDRE LVL <span id="last-lvl-txt">1</span></button>
+    </div>
 </div>
 
 <div id="game-over" class="hidden">
-    <h1 style="background: var(--secondary); -webkit-background-clip: text;">SYSTÈME CRASCHÉ</h1>
+    <h1 style="background: var(--secondary); -webkit-background-clip: text;">SYSTÈME ÉCHEC</h1>
     <h2 id="final-score" style="color:white; margin: 20px 0;">Score: 0</h2>
     <button class="btn" id="restart-btn">RÉESSAYER</button>
-    <button class="btn" onclick="location.href='index.html'" style="margin-top: 15px;">QUITTER</button>
+    <button class="btn" onclick="location.reload()">MENU PRINCIPAL</button>
 </div>
 
 <canvas id="gameCanvas"></canvas>
@@ -57,9 +65,26 @@ const ctx = canvas.getContext('2d');
 
 const CONFIG = {
     playerSpeed: 0.15,
-    baseSpawnRate: 0.02, // Très bas au début
-    levelDuration: 10,    // On monte de niveau toutes les 10 sec
+    baseSpawnRate: 0.02,
+    levelDuration: 10,
     colors: { player: '#00f3ff', red: '#ff0055', orange: '#ff9800' }
+};
+
+// --- LOGIQUE DE SAUVEGARDE ---
+const Storage = {
+    save: (score, level) => {
+        const bestScore = localStorage.getItem('vortex_best_score') || 0;
+        const bestLevel = localStorage.getItem('vortex_best_level') || 1;
+        
+        if (score > bestScore) localStorage.setItem('vortex_best_score', Math.floor(score));
+        if (level > bestLevel) localStorage.setItem('vortex_best_level', level);
+    },
+    load: () => {
+        return {
+            score: localStorage.getItem('vortex_best_score') || 0,
+            level: localStorage.getItem('vortex_best_level') || 1
+        }
+    }
 };
 
 class Enemy {
@@ -67,33 +92,25 @@ class Enemy {
         this.type = type;
         this.size = 20;
         this.active = true;
-        
         const side = Math.floor(Math.random() * 4);
         if(side === 0) { this.x = Math.random()*canvas.width; this.y = -30; }
         else if(side === 1) { this.x = canvas.width+30; this.y = Math.random()*canvas.height; }
         else if(side === 2) { this.x = Math.random()*canvas.width; this.y = canvas.height+30; }
         else { this.x = -30; this.y = Math.random()*canvas.height; }
-
-        // Vitesse progressive selon le niveau
         this.speed = (150 + (level * 20)) * (type === 'orange' ? 0.8 : 1.1);
-        
         const angle = Math.atan2(canvas.height/2 - this.y, canvas.width/2 - this.x) + (Math.random() - 0.5);
         this.vx = Math.cos(angle) * this.speed;
         this.vy = Math.sin(angle) * this.speed;
     }
-
     update(dt, px, py) {
-        if(this.type === 'red') {
-            this.x += this.vx * dt;
-            this.y += this.vy * dt;
-        } else {
+        if(this.type === 'red') { this.x += this.vx * dt; this.y += this.vy * dt; }
+        else {
             const angle = Math.atan2(py - this.y, px - this.x);
             this.x += Math.cos(angle) * this.speed * dt;
             this.y += Math.sin(angle) * this.speed * dt;
         }
         if(this.x < -100 || this.x > canvas.width+100 || this.y < -100 || this.y > canvas.height+100) this.active = false;
     }
-
     draw() {
         ctx.fillStyle = this.type === 'red' ? CONFIG.colors.red : CONFIG.colors.orange;
         ctx.shadowBlur = 10; ctx.shadowColor = ctx.fillStyle;
@@ -114,8 +131,7 @@ class Game {
 
     init() {
         window.addEventListener('resize', () => {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
+            canvas.width = window.innerWidth; canvas.height = window.innerHeight;
         });
         window.dispatchEvent(new Event('resize'));
 
@@ -126,16 +142,33 @@ class Game {
         window.addEventListener('mousemove', handleInput);
         window.addEventListener('touchmove', handleInput);
 
-        document.getElementById('start-btn').onclick = () => this.start();
-        document.getElementById('restart-btn').onclick = () => this.start();
+        document.getElementById('start-btn').onclick = () => this.start(1);
+        document.getElementById('resume-btn').onclick = () => {
+            const data = Storage.load();
+            this.start(parseInt(data.level));
+        };
+        document.getElementById('restart-btn').onclick = () => this.start(1);
         document.getElementById('pause-btn').onclick = () => this.togglePause();
 
+        this.updateMenuStats();
         requestAnimationFrame((t) => this.loop(t));
     }
 
-    start() {
+    updateMenuStats() {
+        const data = Storage.load();
+        document.getElementById('best-score').innerText = data.score;
+        document.getElementById('best-level').innerText = data.level;
+        if(data.level > 1) {
+            document.getElementById('resume-btn').classList.remove('hidden');
+            document.getElementById('last-lvl-txt').innerText = data.level;
+        }
+    }
+
+    start(level = 1) {
         this.state = 'PLAYING';
-        this.score = 0; this.level = 1; this.levelTimer = 0;
+        this.level = level;
+        this.score = (level - 1) * 100; // Donne un score de base si on reprend
+        this.levelTimer = 0;
         this.enemies = [];
         this.player.x = this.player.tx = canvas.width/2;
         this.player.y = this.player.ty = canvas.height/2;
@@ -158,16 +191,10 @@ class Game {
         document.getElementById('menu-overlay').classList.add('hidden');
         const cd = document.getElementById('countdown');
         cd.classList.remove('hidden');
-        let count = 5;
-        cd.innerText = count;
+        let count = 5; cd.innerText = count;
         const interval = setInterval(() => {
-            count--;
-            cd.innerText = count;
-            if(count <= 0) {
-                clearInterval(interval);
-                cd.classList.add('hidden');
-                this.state = 'PLAYING';
-            }
+            count--; cd.innerText = count;
+            if(count <= 0) { clearInterval(interval); cd.classList.add('hidden'); this.state = 'PLAYING'; }
         }, 1000);
     }
 
@@ -182,49 +209,40 @@ class Game {
     update(dt) {
         this.score += dt * 10;
         this.levelTimer += dt;
-
-        // Montée de niveau
         if(this.levelTimer > CONFIG.levelDuration) {
             this.level++;
             this.levelTimer = 0;
+            Storage.save(this.score, this.level); // Sauvegarde automatique à chaque passage de niveau
         }
 
-        // Spawn progressif : plus de niveau = plus d'ennemis
         let spawnChance = CONFIG.baseSpawnRate + (this.level * 0.01);
         if(Math.random() < spawnChance) {
-            // Les orange n'apparaissent qu'à partir du niveau 3
             const type = (this.level >= 3 && Math.random() > 0.7) ? 'orange' : 'red';
             this.enemies.push(new Enemy(type, this.level));
         }
 
-        // Mouvement joueur
         this.player.x += (this.player.tx - this.player.x) * CONFIG.playerSpeed;
         this.player.y += (this.player.ty - this.player.y) * CONFIG.playerSpeed;
 
         for(let i = this.enemies.length - 1; i >= 0; i--) {
             let e = this.enemies[i];
             e.update(dt, this.player.x, this.player.y);
-            
-            // Collision
             if(Math.hypot(this.player.x - e.x, this.player.y - e.y) < 18) {
                 this.state = 'GAMEOVER';
+                Storage.save(this.score, this.level);
+                this.updateMenuStats();
                 document.getElementById('game-over').classList.remove('hidden');
                 document.getElementById('final-score').innerText = "Score: " + Math.floor(this.score);
             }
             if(!e.active) this.enemies.splice(i, 1);
         }
-
         document.getElementById('score-display').innerText = Math.floor(this.score);
         document.getElementById('level-display').innerText = this.level;
     }
 
     draw() {
-        ctx.fillStyle = 'rgba(5, 5, 5, 0.4)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
+        ctx.fillStyle = 'rgba(5, 5, 5, 0.4)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
         this.enemies.forEach(e => e.draw());
-
-        // Player
         ctx.shadowBlur = 20; ctx.shadowColor = CONFIG.colors.player;
         ctx.fillStyle = "white";
         ctx.beginPath(); ctx.arc(this.player.x, this.player.y, 12, 0, Math.PI*2); ctx.fill();
@@ -235,4 +253,5 @@ class Game {
 new Game();
 </script>
 </body>
-</html>
+    </html>
+    
