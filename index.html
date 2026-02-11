@@ -1,645 +1,172 @@
-```html
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>NEON VORTEX: INFINITY</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
-
-        :root {
-            --primary: #00f3ff;
-            --secondary: #ff0055;
-            --bg: #050505;
-            --ui-font: 'Orbitron', sans-serif;
-        }
-
-        * {
-            box-sizing: border-box;
-            user-select: none;
-            -webkit-user-select: none;
-            touch-action: none;
-        }
-
-        body, html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background-color: var(--bg);
-            font-family: var(--ui-font);
-        }
-
-        #game-container {
-            position: relative;
-            width: 100%;
-            height: 100%;
-        }
-
-        canvas {
-            display: block;
-            width: 100%;
-            height: 100%;
-        }
-
-        #ui-layer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: 20px;
-            text-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
-        }
-
-        .hud-top {
-            display: flex;
-            justify-content: space-between;
-            font-size: 1.2rem;
-            color: white;
-            z-index: 10;
-        }
-
+        :root { --primary: #00f3ff; --secondary: #ff0055; --bg: #050505; --ui-font: 'Orbitron', sans-serif; }
+        * { box-sizing: border-box; user-select: none; -webkit-user-select: none; touch-action: none; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: var(--bg); font-family: var(--ui-font); }
+        #game-container { position: relative; width: 100%; height: 100%; }
+        canvas { display: block; width: 100%; height: 100%; }
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; text-shadow: 0 0 10px rgba(0, 243, 255, 0.5); }
+        .hud-top { display: flex; justify-content: space-between; font-size: 1.2rem; color: white; z-index: 10; }
         .hud-score span { color: var(--primary); font-weight: 700; }
         .hud-level span { color: var(--secondary); font-weight: 700; }
-
-        #main-menu, #game-over {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(5, 5, 5, 0.85);
-            backdrop-filter: blur(10px);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 20;
-            pointer-events: auto;
-            transition: opacity 0.3s ease;
-        }
-
+        #main-menu, #game-over { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 5, 5, 0.85); backdrop-filter: blur(10px); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 20; pointer-events: auto; transition: opacity 0.3s ease; }
         .hidden { opacity: 0; pointer-events: none !important; }
-
-        h1 {
-            font-size: 3rem;
-            color: white;
-            text-align: center;
-            margin-bottom: 0;
-            background: linear-gradient(to right, var(--primary), var(--secondary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-transform: uppercase;
-            letter-spacing: 4px;
-        }
-
-        h2 { color: #ccc; font-size: 1.5rem; margin-top: 10px; font-weight: 400; }
-
-        button {
-            margin-top: 30px;
-            padding: 15px 40px;
-            font-size: 1.2rem;
-            font-family: var(--ui-font);
-            color: var(--bg);
-            background: var(--primary);
-            border: none;
-            clip-path: polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%);
-            cursor: pointer;
-            transition: all 0.2s ease;
-            text-transform: uppercase;
-            font-weight: 900;
-            box-shadow: 0 0 20px rgba(0, 243, 255, 0.4);
-        }
-
-        button:hover {
-            transform: scale(1.05);
-            background: white;
-            box-shadow: 0 0 30px rgba(255, 255, 255, 0.6);
-        }
-
-        .progress-bar-container {
-            width: 300px;
-            height: 6px;
-            background: #333;
-            margin-top: 20px;
-            position: relative;
-            overflow: hidden;
-            border-radius: 3px;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: var(--secondary);
-            width: 0%;
-            transition: width 0.1s linear;
-            box-shadow: 0 0 10px var(--secondary);
-        }
-
-        #tutorial {
-            margin-top: 20px;
-            font-size: 0.9rem;
-            color: #888;
-            text-align: center;
-        }
-
+        h1 { font-size: 3rem; color: white; text-align: center; margin-bottom: 0; background: linear-gradient(to right, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-transform: uppercase; letter-spacing: 4px; }
+        h2 { color: #ccc; font-size: 1.2rem; margin-top: 10px; font-weight: 400; }
+        button { margin-top: 30px; padding: 15px 40px; font-size: 1.2rem; font-family: var(--ui-font); color: var(--bg); background: var(--primary); border: none; clip-path: polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%); cursor: pointer; transition: all 0.2s ease; text-transform: uppercase; font-weight: 900; box-shadow: 0 0 20px rgba(0, 243, 255, 0.4); }
+        button:hover { transform: scale(1.05); background: white; }
+        #tutorial { margin-top: 20px; font-size: 0.8rem; color: #888; text-align: center; line-height: 1.6; }
     </style>
 </head>
 <body>
 
 <div id="game-container">
     <canvas id="render-canvas"></canvas>
-    
     <div id="ui-layer">
         <div class="hud-top">
             <div class="hud-score">SCORE: <span id="score-display">0</span></div>
-            <div class="hud-level">LEVEL: <span id="level-display">1</span></div>
+            <div class="hud-level">NIVEAU: <span id="level-display">1</span></div>
         </div>
     </div>
-
     <div id="main-menu">
         <h1>Neon Vortex</h1>
-        <h2>Infinity Protocol</h2>
-        <div id="tutorial">Drag to Move &bull; Avoid Red Shapes &bull; Collect Blue Orbs</div>
-        <button id="start-btn">Initialize</button>
-        <div style="margin-top: 20px; font-size: 0.8rem; color: #555;">HIGHEST LEVEL REACHED: <span id="max-level-display">1</span></div>
+        <h2>Protocole Infinity</h2>
+        <div id="tutorial">Glisse pour bouger • Évite le rouge<br>Relâche pour devenir <b>INTANGIBLE</b></div>
+        <button id="start-btn">Initialiser</button>
+        <div style="margin-top: 20px; font-size: 0.8rem; color: #555;">MEILLEUR NIVEAU : <span id="max-level-display">1</span></div>
     </div>
-
     <div id="game-over" class="hidden">
-        <h1>System Failure</h1>
+        <h1>Échec Système</h1>
         <h2 id="final-score">Score: 0</h2>
-        <button id="restart-btn">Reboot System</button>
+        <button id="restart-btn">Redémarrer</button>
     </div>
 </div>
 
 <script>
-/**
- * NEXUS ARCHITECT v4.0 - INDUSTRIAL GRADE GAME ENGINE
- * Patterns: Singleton, ECS (Lite), Object Pooling, State Machine, Observer
- */
-
-/* --- CONSTANTS & CONFIG --- */
-const CONFIG = {
-    baseSpeed: 300,
-    playerSpeed: 0.15, // Lerp factor
-    spawnRate: 1.5, // Seconds
-    colors: {
-        player: '#00f3ff',
-        enemy: '#ff0055',
-        pickup: '#00ff99',
-        particle: '#ffffff'
-    },
-    difficultyCurve: 1.1, // 10% harder per level
-    levelDuration: 15 // Seconds to next level
-};
-
-/* --- CORE UTILITIES --- */
+const CONFIG = { baseSpeed: 250, playerSpeed: 0.15, spawnRate: 1.2, colors: { player: '#00f3ff', enemy: '#ff0055' }, levelDuration: 10 };
 const Utils = {
     randomRange: (min, max) => Math.random() * (max - min) + min,
     clamp: (val, min, max) => Math.min(Math.max(val, min), max),
     lerp: (start, end, amt) => (1 - amt) * start + amt * end,
-    dist: (x1, y1, x2, y2) => Math.hypot(x2 - x1, y2 - y1),
-    uuid: () => Math.random().toString(36).substr(2, 9)
+    dist: (x1, y1, x2, y2) => Math.hypot(x2 - x1, y2 - y1)
 };
 
-/* --- PERSISTENCE MANAGER (Save System) --- */
-class PersistenceManager {
-    static get KEY() { return 'NEXUS_VORTEX_SAVE_V1'; }
-
-    static save(data) {
-        try {
-            const current = this.load();
-            const merged = { ...current, ...data };
-            // Simple encryption (Base64) to discourage casual editing
-            const stringified = JSON.stringify(merged);
-            const encoded = btoa(stringified);
-            localStorage.setItem(this.KEY, encoded);
-        } catch (e) {
-            console.error("Storage Save Failed", e);
-        }
-    }
-
-    static load() {
-        try {
-            const raw = localStorage.getItem(this.KEY);
-            if (!raw) return { maxLevel: 1, highScore: 0 };
-            return JSON.parse(atob(raw));
-        } catch (e) {
-            console.warn("Save file corrupted, resetting.");
-            return { maxLevel: 1, highScore: 0 };
-        }
-    }
-}
-
-/* --- OBJECT POOLING SYSTEM --- */
-class Pool {
-    constructor(createFn, initialSize = 20) {
-        this.createFn = createFn;
-        this.active = [];
-        this.reserve = [];
-        for(let i=0; i<initialSize; i++) this.reserve.push(createFn());
-    }
-
-    get() {
-        const obj = this.reserve.length > 0 ? this.reserve.pop() : this.createFn();
-        obj.active = true;
-        this.active.push(obj);
-        return obj;
-    }
-
-    release(obj) {
-        obj.active = false;
-        const index = this.active.indexOf(obj);
-        if (index > -1) this.active.splice(index, 1);
-        this.reserve.push(obj);
-    }
-
-    updateAll(dt, ctx) {
-        // Iterate backwards to allow safe removal
-        for (let i = this.active.length - 1; i >= 0; i--) {
-            this.active[i].update(dt);
-            if (!this.active[i].active) {
-                this.release(this.active[i]);
-            } else {
-                this.active[i].draw(ctx);
-            }
-        }
-    }
-
-    reset() {
-        while(this.active.length) this.release(this.active[0]);
-    }
-}
-
-/* --- ENTITIES --- */
-
-class Particle {
-    constructor() {
-        this.x = 0; this.y = 0;
-        this.vx = 0; this.vy = 0;
-        this.life = 1;
-        this.color = '#fff';
-        this.size = 2;
-        this.active = false;
-    }
-
-    reset(x, y, color) {
-        this.x = x; this.y = y;
-        const angle = Utils.randomRange(0, Math.PI * 2);
-        const speed = Utils.randomRange(50, 200);
-        this.vx = Math.cos(angle) * speed;
-        this.vy = Math.sin(angle) * speed;
-        this.life = 1.0;
-        this.color = color;
-        this.size = Utils.randomRange(1, 4);
-        this.active = true;
-    }
-
-    update(dt) {
-        this.x += this.vx * dt;
-        this.y += this.vy * dt;
-        this.life -= dt * 1.5; // Fade speed
-        if (this.life <= 0) this.active = false;
-    }
-
-    draw(ctx) {
-        ctx.globalAlpha = this.life;
-        ctx.fillStyle = this.color;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 1;
-    }
-}
-
 class Enemy {
-    constructor() {
-        this.x = 0; this.y = 0;
-        this.radius = 15;
-        this.active = false;
-        this.type = 0; // 0: Straight, 1: Sine, 2: Homing
-        this.speed = 0;
-        this.angle = 0;
-        this.time = 0;
-    }
-
-    spawn(level, canvasWidth, canvasHeight) {
-        // Determine side to spawn
-        const side = Math.floor(Math.random() * 4); // 0:top, 1:right, 2:bottom, 3:left
-        
-        // Spawn slightly offscreen
-        if(side === 0) { this.x = Utils.randomRange(0, canvasWidth); this.y = -50; }
-        else if(side === 1) { this.x = canvasWidth + 50; this.y = Utils.randomRange(0, canvasHeight); }
-        else if(side === 2) { this.x = Utils.randomRange(0, canvasWidth); this.y = canvasHeight + 50; }
-        else { this.x = -50; this.y = Utils.randomRange(0, canvasHeight); }
-
-        // Target center roughly
-        const targetX = canvasWidth / 2 + Utils.randomRange(-100, 100);
-        const targetY = canvasHeight / 2 + Utils.randomRange(-100, 100);
-        
-        this.angle = Math.atan2(targetY - this.y, targetX - this.x);
-        
-        // Difficulty scaling
-        const speedMult = 1 + (level * 0.15);
-        this.speed = Utils.randomRange(CONFIG.baseSpeed * 0.8, CONFIG.baseSpeed * 1.2) * speedMult;
-        
-        // Enemy complexity increases with level
-        this.type = level > 3 ? (Math.random() > 0.7 ? 1 : 0) : 0;
-        if (level > 6 && Math.random() > 0.8) this.type = 2; // Homing
-
-        this.time = 0;
+    constructor() { this.active = false; }
+    spawn(level, w, h) {
+        const side = Math.floor(Math.random() * 4);
+        if(side === 0) { this.x = Math.random()*w; this.y = -30; }
+        else if(side === 1) { this.x = w+30; this.y = Math.random()*h; }
+        else if(side === 2) { this.x = Math.random()*w; this.y = h+30; }
+        else { this.x = -30; this.y = Math.random()*h; }
+        const tx = w/2 + (Math.random()-0.5)*200;
+        const ty = h/2 + (Math.random()-0.5)*200;
+        this.angle = Math.atan2(ty - this.y, tx - this.x);
+        this.speed = (CONFIG.baseSpeed + (level * 20)) * Utils.randomRange(0.8, 1.2);
+        this.radius = 12;
         this.active = true;
     }
-
     update(dt) {
-        this.time += dt;
-
-        if (this.type === 1) { // Sine wave
-            this.x += Math.cos(this.angle) * this.speed * dt + Math.cos(this.time * 5) * 2;
-            this.y += Math.sin(this.angle) * this.speed * dt + Math.sin(this.time * 5) * 2;
-        } else if (this.type === 2) { // Homing (simple)
-            // Gently steer towards player (requires reference, skipping for strict decoupling, using center bias)
-            // For true isolation, we keep linear or predefined curve. 
-            // Let's stick to advanced linear for performance.
-            this.x += Math.cos(this.angle) * this.speed * dt;
-            this.y += Math.sin(this.angle) * this.speed * dt;
-        } else {
-            this.x += Math.cos(this.angle) * this.speed * dt;
-            this.y += Math.sin(this.angle) * this.speed * dt;
-        }
-
-        // Bounds check (despawn if far off screen)
-        if (this.x < -100 || this.x > window.innerWidth + 100 || 
-            this.y < -100 || this.y > window.innerHeight + 100) {
-            this.active = false;
-        }
+        this.x += Math.cos(this.angle) * this.speed * dt;
+        this.y += Math.sin(this.angle) * this.speed * dt;
+        if(this.x < -100 || this.x > window.innerWidth+100 || this.y < -100 || this.y > window.innerHeight+100) this.active = false;
     }
-
     draw(ctx) {
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = CONFIG.colors.enemy;
         ctx.fillStyle = CONFIG.colors.enemy;
-        
-        ctx.save();
-        ctx.translate(this.x, this.y);
-        ctx.rotate(this.time * 2);
-        
-        // Draw shape based on type
-        if(this.type === 0) {
-            ctx.fillRect(-10, -10, 20, 20); // Square
-        } else if (this.type === 1) {
-            ctx.beginPath(); // Triangle
-            ctx.moveTo(0, -12);
-            ctx.lineTo(10, 10);
-            ctx.lineTo(-10, 10);
-            ctx.fill();
-        }
-        
-        ctx.restore();
+        ctx.shadowBlur = 10; ctx.shadowColor = CONFIG.colors.enemy;
+        ctx.fillRect(this.x-10, this.y-10, 20, 20);
         ctx.shadowBlur = 0;
     }
 }
 
-class Player {
-    constructor() {
-        this.x = window.innerWidth / 2;
-        this.y = window.innerHeight / 2;
-        this.targetX = this.x;
-        this.targetY = this.y;
-        this.radius = 12;
-        this.trail = [];
-    }
-
-    reset() {
-        this.x = window.innerWidth / 2;
-        this.y = window.innerHeight / 2;
-        this.targetX = this.x;
-        this.targetY = this.y;
-        this.trail = [];
-    }
-
-    setInput(x, y) {
-        this.targetX = x;
-        this.targetY = y;
-    }
-
-    update(dt) {
-        // Smooth movement using Lerp
-        this.x = Utils.lerp(this.x, this.targetX, CONFIG.playerSpeed);
-        this.y = Utils.lerp(this.y, this.targetY, CONFIG.playerSpeed);
-
-        // Bounds
-        this.x = Utils.clamp(this.x, this.radius, window.innerWidth - this.radius);
-        this.y = Utils.clamp(this.y, this.radius, window.innerHeight - this.radius);
-
-        // Trail logic
-        this.trail.push({x: this.x, y: this.y, life: 1.0});
-        for (let i = this.trail.length - 1; i >= 0; i--) {
-            this.trail[i].life -= dt * 5;
-            if(this.trail[i].life <= 0) this.trail.splice(i, 1);
-        }
-    }
-
-    draw(ctx) {
-        // Draw Trail
-        ctx.lineCap = 'round';
-        if (this.trail.length > 1) {
-            for (let i = 0; i < this.trail.length - 1; i++) {
-                const p = this.trail[i];
-                const pNext = this.trail[i+1];
-                ctx.beginPath();
-                ctx.moveTo(p.x, p.y);
-                ctx.lineTo(pNext.x, pNext.y);
-                ctx.strokeStyle = `rgba(0, 243, 255, ${p.life})`;
-                ctx.lineWidth = p.life * 10;
-                ctx.stroke();
-            }
-        }
-
-        // Draw Player
-        ctx.shadowBlur = 20;
-        ctx.shadowColor = CONFIG.colors.player;
-        ctx.fillStyle = '#fff';
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = CONFIG.colors.player;
-        ctx.lineWidth = 3;
-        ctx.stroke();
-        ctx.shadowBlur = 0;
-    }
-}
-
-/* --- GAME ENGINE --- */
-class GameEngine {
+class Game {
     constructor() {
         this.canvas = document.getElementById('render-canvas');
-        this.ctx = this.canvas.getContext('2d', { alpha: false }); // Optimize for no transparency on bg
-        
-        this.ui = {
-            score: document.getElementById('score-display'),
-            level: document.getElementById('level-display'),
-            menu: document.getElementById('main-menu'),
-            gameOver: document.getElementById('game-over'),
-            finalScore: document.getElementById('final-score'),
-            maxLevel: document.getElementById('max-level-display')
-        };
-
-        this.state = 'MENU'; // MENU, PLAYING, GAMEOVER
-        this.width = window.innerWidth;
-        this.height = window.innerHeight;
-
-        this.player = new Player();
-        this.enemyPool = new Pool(() => new Enemy(), 50);
-        this.particlePool = new Pool(() => new Particle(), 100);
-
-        this.level = 1;
-        this.score = 0;
-        this.levelTimer = 0;
-        this.spawnTimer = 0;
-        this.lastTime = 0;
-
+        this.ctx = this.canvas.getContext('2d');
+        this.enemies = [];
+        this.player = { x: 0, y: 0, tx: 0, ty: 0, radius: 10, intangible: true };
+        this.state = 'MENU';
+        this.score = 0; this.level = 1; this.timer = 0; this.spawnT = 0;
         this.init();
     }
-
     init() {
-        this.resize();
         window.addEventListener('resize', () => this.resize());
-        
-        // Input Handling (Unified Mouse/Touch)
-        const handleInput = (e) => {
-            if (this.state !== 'PLAYING') return;
-            e.preventDefault();
-            let x, y;
-            if (e.type.includes('touch')) {
-                x = e.touches[0].clientX;
-                y = e.touches[0].clientY;
-            } else {
-                x = e.clientX;
-                y = e.clientY;
-            }
-            this.player.setInput(x, y);
+        this.resize();
+        const input = (e) => {
+            if(this.state !== 'PLAYING') return;
+            const touch = e.touches ? e.touches[0] : e;
+            this.player.tx = touch.clientX; this.player.ty = touch.clientY;
+            this.player.intangible = false;
         };
-
-        window.addEventListener('mousemove', handleInput);
-        window.addEventListener('touchmove', handleInput, { passive: false });
-        window.addEventListener('touchstart', handleInput, { passive: false });
-
-        // Button Listeners
-        document.getElementById('start-btn').addEventListener('click', () => this.startGame());
-        document.getElementById('restart-btn').addEventListener('click', () => this.startGame());
-
-        // Load Save Data
-        const saveData = PersistenceManager.load();
-        this.ui.maxLevel.innerText = saveData.maxLevel;
-
-        // Start Loop
+        const stop = () => { this.player.intangible = true; };
+        window.addEventListener('mousemove', input);
+        window.addEventListener('mousedown', input);
+        window.addEventListener('mouseup', stop);
+        window.addEventListener('touchmove', input, {passive: false});
+        window.addEventListener('touchstart', input, {passive: false});
+        window.addEventListener('touchend', stop);
+        
+        document.getElementById('start-btn').onclick = () => this.start();
+        document.getElementById('restart-btn').onclick = () => this.start();
         requestAnimationFrame((t) => this.loop(t));
     }
-
-    resize() {
-        this.width = window.innerWidth;
-        this.height = window.innerHeight;
-        this.canvas.width = this.width;
-        this.canvas.height = this.height;
+    resize() { this.canvas.width = window.innerWidth; this.canvas.height = window.innerHeight; }
+    start() {
+        this.state = 'PLAYING'; this.score = 0; this.level = 1; this.timer = 0; this.enemies = [];
+        this.player.x = this.player.tx = this.canvas.width/2;
+        this.player.y = this.player.ty = this.canvas.height/2;
+        document.getElementById('main-menu').classList.add('hidden');
+        document.getElementById('game-over').classList.add('hidden');
     }
-
-    startGame() {
-        // Use saved max level to allow skipping easy parts? 
-        // For this game design, we start at 1 but maybe accelerate faster if skilled. 
-        // Let's stick to standard roguelite start: Always level 1, but difficulty scales infinitely.
-        
-        this.level = 1;
-        this.score = 0;
-        this.levelTimer = 0;
-        this.spawnTimer = 0;
-        
-        this.player.reset();
-        this.enemyPool.reset();
-        this.particlePool.reset();
-
-        this.updateUI();
-        this.ui.menu.classList.add('hidden');
-        this.ui.gameOver.classList.add('hidden');
-        this.state = 'PLAYING';
+    loop(t) {
+        const dt = Math.min(0.1, (t - (this.lastT || t)) / 1000);
+        this.lastT = t;
+        this.update(dt);
+        this.draw();
+        requestAnimationFrame((t) => this.loop(t));
     }
-
-    gameOver() {
-        this.state = 'GAMEOVER';
-        
-        // Screen Shake Effect
-        this.canvas.style.transform = `translate(${Utils.randomRange(-10,10)}px, ${Utils.randomRange(-10,10)}px)`;
-        setTimeout(() => this.canvas.style.transform = 'none', 200);
-
-        // Save Progress
-        const currentData = PersistenceManager.load();
-        if (this.level > currentData.maxLevel) {
-            PersistenceManager.save({ maxLevel: this.level });
-        }
-        PersistenceManager.save({ highScore: Math.max(this.score, currentData.highScore) });
-
-        this.ui.finalScore.innerText = `Score: ${Math.floor(this.score)} | Level: ${this.level}`;
-        this.ui.gameOver.classList.remove('hidden');
-    }
-
-    spawnParticles(x, y, color, count = 10) {
-        for(let i=0; i<count; i++) {
-            const p = this.particlePool.get();
-            p.reset(x, y, color);
-        }
-    }
-
     update(dt) {
-        if (this.state !== 'PLAYING') return;
-
-        // Difficulty Progression
-        this.levelTimer += dt;
-        this.spawnTimer += dt;
-        this.score += dt * 10 * this.level;
-
-        // Level Up
-        if (this.levelTimer > CONFIG.levelDuration) {
-            this.level++;
-            this.levelTimer = 0;
-            // Visual Flare for Level Up
-            this.spawnParticles(this.player.x, this.player.y, '#ffd700', 30);
-            this.updateUI();
+        if(this.state !== 'PLAYING') return;
+        this.timer += dt; this.spawnT += dt; this.score += dt * 10;
+        if(this.timer > CONFIG.levelDuration) { this.level++; this.timer = 0; }
+        if(this.spawnT > Math.max(0.15, CONFIG.spawnRate - (this.level*0.05))) {
+            const e = new Enemy(); e.spawn(this.level, this.canvas.width, this.canvas.height);
+            this.enemies.push(e); this.spawnT = 0;
         }
-
-        // Spawning
-        const currentSpawnRate = Math.max(0.2, CONFIG.spawnRate - (this.level * 0.1));
-        if (this.spawnTimer > currentSpawnRate) {
-            this.enemyPool.get().spawn(this.level, this.width, this.height);
-            this.spawnTimer = 0;
-        }
-
-        // Entity Updates
-        this.player.update(dt);
-        
-        // Collision Logic embedded in loop for speed
-        const enemies = this.enemyPool.active;
-        for (let i = 0; i < enemies.length; i++) {
-            const e = enemies[i];
-            const dist = Utils.dist(this.player.x, this.player.y, e.x, e.y);
-            
-            if (dist < this.player.radius + e.radius) {
-                // COLLISION
-                this.spawnParticles(this.player.x, this.player.y, CONFIG.colors.player, 50);
-                this.spawnParticles(e.x, e.y, CONFIG.colors.enemy, 20);
-                this.gameOver();
-                break;
+        this.player.x = Utils.lerp(this.player.x, this.player.tx, CONFIG.playerSpeed);
+        this.player.y = Utils.lerp(this.player.y, this.player.ty, CONFIG.playerSpeed);
+        this.enemies.forEach((e, i) => {
+            e.update(dt);
+            if(!e.active) this.enemies.splice(i, 1);
+            if(!this.player.intangible && Utils.dist(this.player.x, this.player.y, e.x, e.y) < 20) {
+                this.state = 'GAMEOVER';
+                document.getElementById('game-over').classList.remove('hidden');
+                document.getElementById('final-score').innerText = "Score: " + Math.floor(this.score);
             }
-        }
-
-        this.updateUI();
+        });
+        document.getElementById('score-display').innerText = Math.floor(this.score);
+        document.getElementById('level-display').innerText = this.level;
     }
-
     draw() {
-        // Clear Background with slight trail for motion
-    
+        this.ctx.fillStyle = 'rgba(5, 5, 5, 0.3)';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        this.enemies.forEach(e => e.draw(this.ctx));
+        this.ctx.save();
+        this.ctx.translate(this.player.x, this.player.y);
+        this.ctx.globalAlpha = this.player.intangible ? 0.3 : 1.0;
+        this.ctx.shadowBlur = 20; this.ctx.shadowColor = CONFIG.colors.player;
+        this.ctx.fillStyle = "white";
+        this.ctx.beginPath(); this.ctx.arc(0, 0, 12, 0, Math.PI*2); this.ctx.fill();
+        this.ctx.restore();
+    }
+}
+new Game();
+</script>
+</body>
+</html>
