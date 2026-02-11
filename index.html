@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NEON VORTEX: ULTIMATE CHASE</title>
+    <title>NEON VORTEX: STRATEGIC CHASE</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
         :root { --primary: #00f3ff; --secondary: #ff0055; --orange: #ff9800; --bg: #050505; --ui-font: 'Orbitron', sans-serif; }
@@ -36,11 +36,11 @@
 <div id="menu-overlay">
     <h1>NEON VORTEX</h1>
     <div style="color: #666; margin: 20px 0; text-align: center;">
-        RECORD SCORE: <span id="best-score" style="color: var(--primary)">0</span><br>
-        RECORD NIVEAU: <span id="best-lvl" style="color: var(--primary)">1</span>
+        RECORD: <span id="best-score" style="color: var(--primary)">0</span><br>
+        MAX LVL: <span id="best-lvl" style="color: var(--primary)">1</span>
     </div>
     <div style="display: flex; flex-direction: column; gap: 15px;">
-        <button class="btn" id="start-btn" style="font-size: 1.2rem; padding: 15px 40px;">NOUVELLE PARTIE</button>
+        <button class="btn" id="start-btn" style="font-size: 1.2rem; padding: 15px 40px;">NOUVELLE SYNTHÈSE</button>
         <button class="btn hidden" id="resume-btn" style="border-color: var(--orange); color: var(--orange);">REPRENDRE LVL <span id="resume-lvl-val">1</span></button>
     </div>
 </div>
@@ -49,7 +49,6 @@
     <h1 style="background: var(--secondary); -webkit-background-clip: text;">ÉCHEC SYSTÈME</h1>
     <h2 id="final-score" style="color:white; margin: 20px 0;">Score: 0</h2>
     <button class="btn" id="restart-btn">RECOMMENCER</button>
-    <button class="btn" onclick="location.reload()">MENU</button>
 </div>
 
 <canvas id="canvas"></canvas>
@@ -68,18 +67,16 @@ const GAME = {
     lastTime: 0
 };
 
-// --- SAUVEGARDE ---
 function saveGame() {
-    const bScore = localStorage.getItem('vortex_score') || 0;
-    const bLvl = localStorage.getItem('vortex_lvl') || 1;
-    if (GAME.score > bScore) localStorage.setItem('vortex_score', Math.floor(GAME.score));
-    if (GAME.level > bLvl) localStorage.setItem('vortex_lvl', GAME.level);
+    const bS = localStorage.getItem('vortex_score') || 0;
+    const bL = localStorage.getItem('vortex_lvl') || 1;
+    if (GAME.score > bS) localStorage.setItem('vortex_score', Math.floor(GAME.score));
+    if (GAME.level > bL) localStorage.setItem('vortex_lvl', GAME.level);
 }
 
 function loadStats() {
-    const s = localStorage.getItem('vortex_score') || 0;
+    document.getElementById('best-score').innerText = localStorage.getItem('vortex_score') || 0;
     const l = localStorage.getItem('vortex_lvl') || 1;
-    document.getElementById('best-score').innerText = s;
     document.getElementById('best-lvl').innerText = l;
     if(l > 1) {
         document.getElementById('resume-btn').classList.remove('hidden');
@@ -87,15 +84,16 @@ function loadStats() {
     }
 }
 
-// --- ENNEMIS TRAQUEURS ---
 class Enemy {
     constructor(type, level) {
         this.type = type;
         this.size = 20;
         this.active = true;
-        // Les orange sont un peu plus lents pour permettre l'esquive, mais ils sont collants !
         this.speed = (150 + (level * 20)) * (type === 'orange' ? 0.75 : 1.1);
         
+        // --- NOUVEAUTÉ : DURÉE DE VIE DES ORANGES (10 secondes) ---
+        this.lifeTime = 10; 
+
         const side = Math.floor(Math.random() * 4);
         if(side === 0) { this.x = Math.random()*canvas.width; this.y = -30; }
         else if(side === 1) { this.x = canvas.width+30; this.y = Math.random()*canvas.height; }
@@ -111,19 +109,36 @@ class Enemy {
         if(this.type === 'red') {
             this.x += this.vx * dt;
             this.y += this.vy * dt;
-            // Les rouges disparaissent s'ils sortent
             if(this.x < -100 || this.x > canvas.width+100 || this.y < -100 || this.y > canvas.height+100) this.active = false;
         } else {
-            // ORANGE : TRAQUE PERMANENTE
+            // TRAQUE : L'orange recalcule la position du joueur
             const angle = Math.atan2(GAME.player.y - this.y, GAME.player.x - this.x);
             this.x += Math.cos(angle) * this.speed * dt;
             this.y += Math.sin(angle) * this.speed * dt;
-            // Les oranges ne meurent jamais de sortie d'écran, ils reviennent toujours
+
+            // DÉCOMPTE DE VIE : Il finit par s'auto-détruire
+            this.lifeTime -= dt;
+            if(this.lifeTime <= 0) {
+                this.active = false; // Il disparaît après 10 secondes
+            }
         }
+    }
+
+    draw() {
+        ctx.fillStyle = this.type === 'red' ? '#ff0055' : '#ff9800';
+        
+        // Petit effet : l'orange clignote quand il va bientôt disparaître
+        if(this.type === 'orange' && this.lifeTime < 2) {
+            ctx.globalAlpha = Math.sin(Date.now() * 0.02) * 0.5 + 0.5;
+        }
+
+        ctx.shadowBlur = 15; ctx.shadowColor = ctx.fillStyle;
+        ctx.fillRect(this.x - 10, this.y - 10, 20, 20);
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1.0;
     }
 }
 
-// --- ENGINE ---
 function init() {
     window.addEventListener('resize', () => {
         canvas.width = window.innerWidth; canvas.height = window.innerHeight;
@@ -193,7 +208,7 @@ function update(dt) {
     if(GAME.levelTimer > 10) { GAME.level++; GAME.levelTimer = 0; saveGame(); }
 
     if(Math.random() < (0.015 + GAME.level * 0.008)) {
-        const type = (GAME.level >= 3 && Math.random() > 0.8) ? 'orange' : 'red';
+        const type = (GAME.level >= 3 && Math.random() > 0.85) ? 'orange' : 'red';
         GAME.enemies.push(new Enemy(type, GAME.level));
     }
 
@@ -219,13 +234,7 @@ function update(dt) {
 function draw() {
     ctx.fillStyle = 'rgba(5, 5, 5, 0.4)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    GAME.enemies.forEach(e => {
-        ctx.fillStyle = e.type === 'red' ? '#ff0055' : '#ff9800';
-        ctx.shadowBlur = 15; ctx.shadowColor = ctx.fillStyle;
-        ctx.fillRect(e.x - 10, e.y - 10, 20, 20);
-    });
-
+    GAME.enemies.forEach(e => e.draw());
     ctx.shadowBlur = 20; ctx.shadowColor = '#00f3ff';
     ctx.fillStyle = "white";
     ctx.beginPath(); ctx.arc(GAME.player.x, GAME.player.y, 12, 0, Math.PI*2); ctx.fill();
