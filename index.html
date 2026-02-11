@@ -3,599 +3,535 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NEXUS // BLOCK BLAST [ENTERPRISE EDITION]</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>AETHER: PROTOCOL ZERO | NEXUS ARCHITECT</title>
     <style>
         :root {
-            --bg-primary: #0f172a;
-            --bg-secondary: #1e293b;
-            --accent-primary: #3b82f6;
-            --accent-secondary: #8b5cf6;
-            --text-primary: #f8fafc;
-            --font-stack: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --neon-blue: #00f3ff;
+            --neon-pink: #ff0055;
+            --dark-bg: #050505;
+            --ui-font: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
         }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; touch-action: none; user-select: none; -webkit-user-select: none; }
 
         body {
-            background-color: var(--bg-primary);
-            color: var(--text-primary);
-            font-family: var(--font-stack);
-            height: 100vh;
+            margin: 0;
             overflow: hidden;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            background-color: var(--dark-bg);
+            font-family: var(--ui-font);
+            user-select: none;
+            -webkit-font-smoothing: antialiased;
         }
 
-        #game-container {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            max-width: 600px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
         }
 
-        canvas {
-            border-radius: 12px;
-            box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.5);
-        }
-
-        .ui-layer {
+        #ui-layer {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
+            z-index: 10;
             pointer-events: none;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
             padding: 2rem;
+            box-sizing: border-box;
         }
 
-        .hud-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            width: 100%;
+        .hud-element {
+            color: white;
+            text-shadow: 0 0 10px var(--neon-blue);
+            opacity: 0.9;
         }
 
-        .score-box {
-            background: rgba(30, 41, 59, 0.9);
-            backdrop-filter: blur(10px);
-            padding: 1rem 1.5rem;
-            border-radius: 16px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            text-align: center;
+        #score-display {
+            font-size: 3rem;
+            font-weight: 800;
+            letter-spacing: -2px;
         }
 
-        .score-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; }
-        .score-value { font-size: 1.5rem; font-weight: 800; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        #score-label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--neon-blue);
+        }
 
-        #modal-overlay {
+        #game-over-screen {
             position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(15, 23, 42, 0.85);
-            backdrop-filter: blur(8px);
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(10px);
             display: flex;
-            justify-content: center;
+            flex-direction: column;
             align-items: center;
-            z-index: 100;
+            justify-content: center;
+            z-index: 20;
             opacity: 0;
             pointer-events: none;
-            transition: opacity 0.3s ease;
+            transition: opacity 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
 
-        #modal-overlay.active { opacity: 1; pointer-events: auto; }
-
-        .modal-content {
-            background: var(--bg-secondary);
-            padding: 2.5rem;
-            border-radius: 24px;
-            text-align: center;
-            border: 1px solid rgba(255,255,255,0.05);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            transform: scale(0.9);
-            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        #game-over-screen.active {
+            opacity: 1;
+            pointer-events: all;
         }
 
-        #modal-overlay.active .modal-content { transform: scale(1); }
+        h1 {
+            font-size: 4rem;
+            color: transparent;
+            -webkit-text-stroke: 2px white;
+            margin: 0 0 1rem 0;
+            text-transform: uppercase;
+        }
 
-        h1 { font-size: 2.5rem; margin-bottom: 0.5rem; font-weight: 900; }
-        p { color: #94a3b8; margin-bottom: 2rem; }
-
-        button {
-            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-            border: none;
+        button.cyber-btn {
+            background: transparent;
+            border: 2px solid var(--neon-blue);
+            color: var(--neon-blue);
             padding: 1rem 3rem;
-            color: white;
-            font-size: 1.1rem;
-            font-weight: 700;
-            border-radius: 12px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
             cursor: pointer;
-            transition: transform 0.1s, box-shadow 0.2s;
-            box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.4);
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
         }
 
-        button:active { transform: scale(0.96); }
+        button.cyber-btn:hover {
+            background: var(--neon-blue);
+            color: var(--dark-bg);
+            box-shadow: 0 0 30px var(--neon-blue);
+        }
 
+        .scanline {
+            width: 100%;
+            height: 100px;
+            z-index: 10;
+            background: linear-gradient(0deg, rgba(0,0,0,0) 0%, rgba(255, 255, 255, 0.05) 50%, rgba(0,0,0,0) 100%);
+            opacity: 0.1;
+            position: absolute;
+            bottom: 100%;
+            animation: scanline 10s linear infinite;
+            pointer-events: none;
+        }
+
+        @keyframes scanline {
+            0% { bottom: 100%; }
+            100% { bottom: -100px; }
+        }
+
+        #instructions {
+            position: absolute;
+            bottom: 10%;
+            width: 100%;
+            text-align: center;
+            color: rgba(255,255,255,0.5);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
     </style>
 </head>
 <body>
 
-<div id="game-container">
-    <div class="ui-layer">
-        <div class="hud-top">
-            <div class="score-box">
-                <div class="score-label">Best</div>
-                <div class="score-value" id="best-score">0</div>
-            </div>
-            <div class="score-box">
-                <div class="score-label">Score</div>
-                <div class="score-value" id="current-score">0</div>
-            </div>
+    <div id="canvas-container"></div>
+    <div class="scanline"></div>
+
+    <div id="ui-layer">
+        <div class="hud-element">
+            <div id="score-label">Data Sync</div>
+            <div id="score-display">0</div>
         </div>
+        <div id="instructions">Click Left/Right or A/D to Strafe</div>
     </div>
-    <canvas id="gameCanvas"></canvas>
-    
-    <div id="modal-overlay" class="active">
-        <div class="modal-content">
-            <h1 id="modal-title">BLOCK BLAST</h1>
-            <p id="modal-msg">Nexus Engine Ready.</p>
-            <button id="start-btn">INITIALIZE</button>
-        </div>
+
+    <div id="game-over-screen">
+        <h1>System Failure</h1>
+        <button class="cyber-btn" onclick="GameCore.restart()">Reboot Sequence</button>
     </div>
-</div>
 
-<script>
-/**
- * NEXUS ARCHITECT v4.0 - INDUSTRIAL GRADE GAME ENGINE
- * Pattern: Entity-Component-System (Hybrid) / Singleton State Manager
- * Performance: Canvas API with double buffering simulation logic
- */
-
-// --- CONSTANTS & CONFIGURATION ---
-const CONFIG = {
-    GRID_SIZE: 8,
-    CELL_GAP: 4,
-    ANIMATION_SPEED: 0.15, // Seconds
-    COLORS: [
-        '#ef4444', // Red
-        '#f59e0b', // Amber
-        '#10b981', // Emerald
-        '#3b82f6', // Blue
-        '#8b5cf6', // Violet
-        '#ec4899'  // Pink
-    ],
-    BG_GRID_COLOR: '#334155',
-    SHAPES: [
-        [[1]], [[1,1]], [[1,1,1]], [[1,1,1,1]], // Lines
-        [[1],[1]], [[1],[1],[1]], [[1],[1],[1],[1]], // Columns
-        [[1,1],[1,1]], // Square
-        [[1,0],[1,0],[1,1]], [[0,1],[0,1],[1,1]], // L shapes
-        [[1,1,1],[0,1,0]], [[0,1,0],[1,1,1]], // T shapes
-        [[1,1,0],[0,1,1]], [[0,1,1],[1,1,0]] // Z shapes
-    ]
-};
-
-// --- UTILS ---
-const Utils = {
-    randomInt: (min, max) => Math.floor(Math.random() * (max - min + 1) + min),
-    lerp: (start, end, t) => start * (1 - t) + end * t,
-    isMobile: () => /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),
-    getDPR: () => window.devicePixelRatio || 1
-};
-
-// --- AUDIO SYSTEM (Synthesized for performance/no assets) ---
-class AudioController {
-    constructor() {
-        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-        this.enabled = true;
-    }
-
-    playTone(freq, type, duration, vol = 0.1) {
-        if (!this.enabled) return;
-        if (this.ctx.state === 'suspended') this.ctx.resume();
-        
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        
-        osc.type = type;
-        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-        
-        gain.gain.setValueAtTime(vol, this.ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
-        
-        osc.connect(gain);
-        gain.connect(this.ctx.destination);
-        
-        osc.start();
-        osc.stop(this.ctx.currentTime + duration);
-    }
-
-    playPlace() { this.playTone(400, 'sine', 0.1); }
-    playClear() { this.playTone(800, 'triangle', 0.3, 0.2); }
-    playGameOver() { this.playTone(150, 'sawtooth', 0.8, 0.3); }
-}
-
-// --- PARTICLE SYSTEM (Object Pooling) ---
-class Particle {
-    constructor() { this.reset(); }
-    reset() {
-        this.x = 0; this.y = 0; this.vx = 0; this.vy = 0;
-        this.life = 0; this.maxLife = 0; this.color = '#fff';
-        this.size = 0; this.active = false;
-    }
-}
-
-class ParticleSystem {
-    constructor(limit = 100) {
-        this.pool = Array.from({ length: limit }, () => new Particle());
-        this.activeParticles = [];
-    }
-
-    spawn(x, y, color) {
-        const p = this.pool.find(p => !p.active);
-        if (!p) return;
-
-        p.active = true;
-        p.x = x;
-        p.y = y;
-        const angle = Math.random() * Math.PI * 2;
-        const speed = Math.random() * 4 + 2;
-        p.vx = Math.cos(angle) * speed;
-        p.vy = Math.sin(angle) * speed;
-        p.life = 1.0;
-        p.maxLife = 1.0;
-        p.color = color;
-        p.size = Math.random() * 5 + 2;
-        this.activeParticles.push(p);
-    }
-
-    update() {
-        for (let i = this.activeParticles.length - 1; i >= 0; i--) {
-            const p = this.activeParticles[i];
-            p.x += p.vx;
-            p.y += p.vy;
-            p.vy += 0.2; // Gravity
-            p.life -= 0.03;
-            p.size *= 0.95;
-
-            if (p.life <= 0) {
-                p.active = false;
-                this.activeParticles.splice(i, 1);
+    <!-- Triple-A Architecture: ES Modules for Three.js -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
             }
         }
-    }
+    </script>
 
-    draw(ctx) {
-        ctx.save();
-        this.activeParticles.forEach(p => {
-            ctx.globalAlpha = p.life;
-            ctx.fillStyle = p.color;
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-            ctx.fill();
-        });
-        ctx.restore();
-    }
-}
+    <script type="module">
+        import * as THREE from 'three';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 
-// --- CORE GAME ENGINE ---
-class GameEngine {
-    constructor() {
-        this.canvas = document.getElementById('gameCanvas');
-        this.ctx = this.canvas.getContext('2d', { alpha: false }); // Optimize for non-transparent canvas
-        
-        // State
-        this.grid = []; // 8x8 array
-        this.hand = [null, null, null]; // The 3 shapes available
-        this.score = 0;
-        this.bestScore = parseInt(localStorage.getItem('nexus_block_best') || '0');
-        this.state = 'MENU'; // MENU, PLAYING, GAMEOVER
-        
-        // Layout metrics (calculated on resize)
-        this.metrics = {
-            width: 0, height: 0,
-            gridSize: 0, cellSize: 0, gridX: 0, gridY: 0,
-            handY: 0, handZoneHeight: 0
+        /**
+         * NEXUS ARCHITECT v4.0 - INDUSTRIAL GRADE ENGINE
+         * Pattern: Entity-Component-System (Hybrid) + Object Pooling + FSM
+         */
+
+        // --- CONFIGURATION ---
+        const CONFIG = {
+            laneWidth: 3.5,
+            baseSpeed: 0.8,
+            maxSpeed: 2.5,
+            acceleration: 0.0001,
+            fov: 75,
+            bloomThreshold: 0,
+            bloomStrength: 1.5,
+            bloomRadius: 0.5,
+            poolSize: 20
         };
 
-        // Interaction
-        this.dragState = {
-            active: false,
-            shapeIndex: -1,
-            shape: null, // Copy of the shape data
-            visualX: 0, visualY: 0,
-            offsetX: 0, offsetY: 0,
-            targetGridX: -1, targetGridY: -1
+        // --- MATH UTILS ---
+        const MathUtils = {
+            lerp: (start, end, t) => start * (1 - t) + end * t,
+            clamp: (num, min, max) => Math.min(Math.max(num, min), max),
+            randRange: (min, max) => Math.random() * (max - min) + min
         };
 
-        // Systems
-        this.audio = new AudioController();
-        this.particles = new ParticleSystem();
+        // --- OBJECT POOLING SYSTEM (Memory Optimization) ---
+        class ObjectPool {
+            constructor(createFn, size) {
+                this.pool = [];
+                this.createFn = createFn;
+                for (let i = 0; i < size; i++) {
+                    const obj = this.createFn();
+                    obj.visible = false;
+                    this.pool.push(obj);
+                }
+            }
 
-        this.init();
-    }
+            get() {
+                const obj = this.pool.find(o => !o.visible);
+                if (obj) {
+                    obj.visible = true;
+                    return obj;
+                }
+                // Expansion fallback
+                const newObj = this.createFn();
+                this.pool.push(newObj);
+                return newObj;
+            }
 
-    init() {
-        this.resize();
-        window.addEventListener('resize', () => this.resize());
-        
-        // Event Listeners (Unified Pointer Events)
-        this.canvas.addEventListener('pointerdown', e => this.handleInputStart(e));
-        window.addEventListener('pointermove', e => this.handleInputMove(e));
-        window.addEventListener('pointerup', e => this.handleInputEnd(e));
-
-        // UI Bindings
-        document.getElementById('start-btn').addEventListener('click', () => this.startGame());
-
-        // Update DOM
-        this.updateScoreUI();
-
-        // Loop
-        requestAnimationFrame(t => this.loop(t));
-    }
-
-    resize() {
-        const dpr = Utils.getDPR();
-        const container = document.getElementById('game-container');
-        const rect = container.getBoundingClientRect();
-        
-        this.canvas.width = rect.width * dpr;
-        this.canvas.height = rect.height * dpr;
-        
-        this.ctx.scale(dpr, dpr);
-        this.canvas.style.width = `${rect.width}px`;
-        this.canvas.style.height = `${rect.height}px`;
-
-        this.metrics.width = rect.width;
-        this.metrics.height = rect.height;
-
-        // Calculate layout
-        const safeMargin = 20;
-        const availableWidth = this.metrics.width - (safeMargin * 2);
-        
-        // Grid logic
-        this.metrics.cellSize = Math.floor(availableWidth / CONFIG.GRID_SIZE);
-        this.metrics.gridSize = this.metrics.cellSize * CONFIG.GRID_SIZE;
-        this.metrics.gridX = safeMargin + (availableWidth - this.metrics.gridSize) / 2;
-        this.metrics.gridY = this.metrics.height * 0.15; // Top 15% padding
-
-        // Hand logic
-        this.metrics.handY = this.metrics.gridY + this.metrics.gridSize + 40;
-        this.metrics.handZoneHeight = this.metrics.height - this.metrics.handY;
-    }
-
-    startGame() {
-        // Reset Grid
-        this.grid = Array(CONFIG.GRID_SIZE).fill().map(() => Array(CONFIG.GRID_SIZE).fill(null));
-        this.score = 0;
-        this.updateScoreUI();
-        this.state = 'PLAYING';
-        this.spawnHand();
-        
-        document.getElementById('modal-overlay').classList.remove('active');
-        this.audio.playPlace();
-    }
-
-    spawnHand() {
-        // Create 3 new shapes
-        for (let i = 0; i < 3; i++) {
-            const shapeDef = CONFIG.SHAPES[Utils.randomInt(0, CONFIG.SHAPES.length - 1)];
-            const color = CONFIG.COLORS[Utils.randomInt(0, CONFIG.COLORS.length - 1)];
-            
-            // Deep copy shape matrix
-            this.hand[i] = {
-                matrix: shapeDef,
-                color: color,
-                scale: 0.6, // Smaller in hand
-                x: 0, y: 0, // Calculated in render
-                width: shapeDef[0].length,
-                height: shapeDef.length
-            };
-        }
-        
-        if (this.checkGameOver()) {
-            this.triggerGameOver();
-        }
-    }
-
-    // --- LOGIC: PLACEMENT & CLEARING ---
-
-    canPlace(shapeMatrix, gridX, gridY) {
-        const h = shapeMatrix.length;
-        const w = shapeMatrix[0].length;
-
-        // Boundary check
-        if (gridX < 0 || gridX + w > CONFIG.GRID_SIZE || gridY < 0 || gridY + h > CONFIG.GRID_SIZE) {
-            return false;
+            release(obj) {
+                obj.visible = false;
+            }
         }
 
-        // Collision check
-        for (let y = 0; y < h; y++) {
-            for (let x = 0; x < w; x++) {
-                if (shapeMatrix[y][x] === 1) {
-                    if (this.grid[gridY + y][gridX + x] !== null) {
-                        return false;
+        // --- ENTITY SYSTEM ---
+        class Player {
+            constructor(scene) {
+                this.lane = 0; // -1, 0, 1
+                this.targetX = 0;
+                
+                // Geometry
+                const geometry = new THREE.ConeGeometry(0.5, 1.5, 4);
+                geometry.rotateX(Math.PI / 2);
+                const material = new THREE.MeshStandardMaterial({ 
+                    color: 0x00f3ff, 
+                    emissive: 0x0044aa,
+                    emissiveIntensity: 0.5,
+                    roughness: 0.2,
+                    metalness: 0.8,
+                    flatShading: true
+                });
+                
+                this.mesh = new THREE.Mesh(geometry, material);
+                this.mesh.position.y = 0.5;
+                this.mesh.castShadow = true;
+                
+                // Engine Particles
+                this.engineGlow = new THREE.PointLight(0x00f3ff, 2, 5);
+                this.engineGlow.position.set(0, 0.5, 1);
+                this.mesh.add(this.engineGlow);
+
+                scene.add(this.mesh);
+            }
+
+            move(direction) {
+                this.lane = MathUtils.clamp(this.lane + direction, -1, 1);
+                this.targetX = this.lane * CONFIG.laneWidth;
+            }
+
+            update(dt, time) {
+                // Smooth Lerp movement
+                this.mesh.position.x = MathUtils.lerp(this.mesh.position.x, this.targetX, 10 * dt);
+                
+                // Dynamic Roll
+                const roll = (this.mesh.position.x - this.targetX) * 0.5;
+                this.mesh.rotation.z = -roll;
+                this.mesh.rotation.x = (Math.sin(time * 10) * 0.05); // Idle hover
+            }
+
+            reset() {
+                this.lane = 0;
+                this.targetX = 0;
+                this.mesh.position.set(0, 0.5, 0);
+            }
+        }
+
+        class ObstacleManager {
+            constructor(scene) {
+                this.scene = scene;
+                this.activeObstacles = [];
+                
+                // Prefabricated Geometry for Pool
+                const geometry = new THREE.BoxGeometry(2, 2, 2);
+                const material = new THREE.MeshStandardMaterial({
+                    color: 0xff0055,
+                    emissive: 0x550011,
+                    emissiveIntensity: 0.8,
+                    roughness: 0.1,
+                    metalness: 0.9,
+                    wireframe: false
+                });
+
+                this.pool = new ObjectPool(() => {
+                    const mesh = new THREE.Mesh(geometry, material);
+                    mesh.castShadow = true;
+                    this.scene.add(mesh);
+                    return mesh;
+                }, CONFIG.poolSize);
+
+                this.spawnTimer = 0;
+                this.spawnInterval = 1.5; // Seconds
+            }
+
+            spawn(speed) {
+                const obstacle = this.pool.get();
+                // Random Lane
+                const lane = Math.floor(MathUtils.randRange(-1, 2)); 
+                
+                obstacle.position.set(lane * CONFIG.laneWidth, 1, -60); // Spawn far away
+                obstacle.scale.setScalar(0.1); // Scale animation start
+                
+                // Custom data attached to mesh
+                obstacle.userData = { 
+                    lane: lane, 
+                    active: true,
+                    rotationSpeed: { x: Math.random(), y: Math.random() } 
+                };
+            }
+
+            update(dt, speed, playerMesh) {
+                // Adjust spawn rate based on speed
+                this.spawnInterval = Math.max(0.4, 1.5 - (speed * 0.5));
+                this.spawnTimer += dt;
+
+                if (this.spawnTimer > this.spawnInterval) {
+                    this.spawn(speed);
+                    this.spawnTimer = 0;
+                }
+
+                // Update active obstacles
+                const killList = [];
+
+                this.pool.pool.forEach(obs => {
+                    if (!obs.visible) return;
+
+                    // Move towards player
+                    obs.position.z += speed * 40 * dt;
+                    
+                    // Rotate
+                    obs.rotation.x += obs.userData.rotationSpeed.x * dt * 2;
+                    obs.rotation.y += obs.userData.rotationSpeed.y * dt * 2;
+
+                    // Spawn animation
+                    if(obs.scale.x < 1) obs.scale.addScalar(dt * 5);
+
+                    // Collision Detection (AABB approximation)
+                    const distZ = Math.abs(obs.position.z - playerMesh.position.z);
+                    const distX = Math.abs(obs.position.x - playerMesh.position.x);
+
+                    if (distZ < 1.5 && distX < 1.0) {
+                        window.GameCore.gameOver();
                     }
-                }
-            }
-        }
-        return true;
-    }
 
-    placeShape(shapeMatrix, gridX, gridY, color) {
-        const h = shapeMatrix.length;
-        const w = shapeMatrix[0].length;
-
-        for (let y = 0; y < h; y++) {
-            for (let x = 0; x < w; x++) {
-                if (shapeMatrix[y][x] === 1) {
-                    this.grid[gridY + y][gridX + x] = color;
-                    // Visual fx
-                    const worldX = this.metrics.gridX + (gridX + x) * this.metrics.cellSize + this.metrics.cellSize/2;
-                    const worldY = this.metrics.gridY + (gridY + y) * this.metrics.cellSize + this.metrics.cellSize/2;
-                    this.particles.spawn(worldX, worldY, color);
-                }
-            }
-        }
-        
-        this.audio.playPlace();
-        this.hand[this.dragState.shapeIndex] = null;
-        this.checkClears();
-        
-        // Check if hand needs refill
-        if (this.hand.every(s => s === null)) {
-            setTimeout(() => this.spawnHand(), 200);
-        } else {
-            if (this.checkGameOver()) this.triggerGameOver();
-        }
-    }
-
-    checkClears() {
-        let rowsToClear = [];
-        let colsToClear = [];
-
-        // Check Rows
-        for (let y = 0; y < CONFIG.GRID_SIZE; y++) {
-            if (this.grid[y].every(cell => cell !== null)) rowsToClear.push(y);
-        }
-
-        // Check Cols
-        for (let x = 0; x < CONFIG.GRID_SIZE; x++) {
-            let full = true;
-            for (let y = 0; y < CONFIG.GRID_SIZE; y++) {
-                if (this.grid[y][x] === null) full = false;
-            }
-            if (full) colsToClear.push(x);
-        }
-
-        if (rowsToClear.length > 0 || colsToClear.length > 0) {
-            this.audio.playClear();
-            const basePoints = 10;
-            const comboMultiplier = rowsToClear.length + colsToClear.length;
-            this.score += (basePoints * comboMultiplier * comboMultiplier); // Exponential scoring for combos
-            this.updateScoreUI();
-
-            // Clear logic
-            rowsToClear.forEach(y => {
-                for(let x=0; x<CONFIG.GRID_SIZE; x++) {
-                    this.spawnExplosion(x, y, this.grid[y][x]);
-                    this.grid[y][x] = null;
-                }
-            });
-            colsToClear.forEach(x => {
-                for(let y=0; y<CONFIG.GRID_SIZE; y++) {
-                    if (this.grid[y][x] !== null) { // Prevent double clear issues
-                        this.spawnExplosion(x, y, this.grid[y][x]);
-                        this.grid[y][x] = null;
+                    // Recycle
+                    if (obs.position.z > 10) {
+                        this.pool.release(obs);
                     }
-                }
-            });
+                });
+            }
+
+            reset() {
+                this.pool.pool.forEach(o => this.pool.release(o));
+                this.spawnTimer = 0;
+            }
         }
-    }
 
-    spawnExplosion(gridX, gridY, color) {
-        const cx = this.metrics.gridX + gridX * this.metrics.cellSize + this.metrics.cellSize/2;
-        const cy = this.metrics.gridY + gridY * this.metrics.cellSize + this.metrics.cellSize/2;
-        for(let i=0; i<5; i++) this.particles.spawn(cx, cy, color);
-    }
+        class Environment {
+            constructor(scene) {
+                // Moving Grid Floor
+                const gridHelper = new THREE.GridHelper(200, 50, 0x00f3ff, 0x111111);
+                scene.add(gridHelper);
+                this.grid = gridHelper;
 
-    checkGameOver() {
-        // Iterate available shapes
-        for (let i = 0; i < 3; i++) {
-            const shape = this.hand[i];
-            if (!shape) continue;
+                // Fog for depth hiding
+                scene.fog = new THREE.FogExp2(CONFIG.baseSpeed, 0.02);
+            }
 
-            // Brute force check: can this shape fit ANYWHERE?
-            for (let y = 0; y < CONFIG.GRID_SIZE; y++) {
-                for (let x = 0; x < CONFIG.GRID_SIZE; x++) {
-                    if (this.canPlace(shape.matrix, x, y)) return false;
+            update(speed, dt) {
+                // Infinite grid illusion
+                this.grid.position.z += speed * 40 * dt;
+                if (this.grid.position.z > 4) {
+                    this.grid.position.z = 0;
                 }
             }
         }
-        return true; // No moves left
-    }
 
-    triggerGameOver() {
-        this.state = 'GAMEOVER';
-        this.audio.playGameOver();
-        if (this.score > this.bestScore) {
-            this.bestScore = this.score;
-            localStorage.setItem('nexus_block_best', this.bestScore);
-        }
-        
-        const modal = document.getElementById('modal-overlay');
-        document.getElementById('modal-title').innerText = "SYSTEM FAILURE";
-        document.getElementById('modal-msg').innerText = `Final Score: ${this.score}`;
-        document.getElementById('start-btn').innerText = "REBOOT SYSTEM";
-        modal.classList.add('active');
-    }
+        // --- MAIN ENGINE ---
+        class Engine {
+            constructor() {
+                this.state = 'MENU'; // MENU, PLAYING, GAMEOVER
+                this.score = 0;
+                this.speed = CONFIG.baseSpeed;
+                this.clock = new THREE.Clock();
 
-    updateScoreUI() {
-        document.getElementById('current-score').innerText = this.score;
-        document.getElementById('best-score').innerText = this.bestScore;
-    }
+                // DOM
+                this.container = document.getElementById('canvas-container');
+                this.scoreEl = document.getElementById('score-display');
+                this.gameOverScreen = document.getElementById('game-over-screen');
 
-    // --- INPUT HANDLING ---
-    handleInputStart(e) {
-        if (this.state !== 'PLAYING') return;
+                // Three.js Setup
+                this.scene = new THREE.Scene();
+                this.camera = new THREE.PerspectiveCamera(CONFIG.fov, window.innerWidth / window.innerHeight, 0.1, 1000);
+                this.camera.position.set(0, 3, 5);
+                this.camera.lookAt(0, 0, -10);
 
-        const rect = this.canvas.getBoundingClientRect();
-        const x = (e.clientX - rect.left);
-        const y = (e.clientY - rect.top);
+                this.renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                this.container.appendChild(this.renderer.domElement);
 
-        // Check if clicked a hand shape
-        const slotWidth = this.metrics.width / 3;
-        
-        for (let i = 0; i < 3; i++) {
-            if (!this.hand[i]) continue;
-            
-            // Hitbox approximation
-            const centerX = (i * slotWidth) + (slotWidth / 2);
-            const centerY = this.metrics.handY + 60;
-            const dist = Math.hypot(x - centerX, y - centerY);
+                // Lighting
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+                this.scene.add(ambientLight);
+                
+                const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
+                dirLight.position.set(0, 10, 0);
+                this.scene.add(dirLight);
 
-            if (dist < 60) { // Hit radius
-                this.dragState.active = true;
-                this.dragState.shapeIndex = i;
-                this.dragState.shape = this.hand[i];
-                this.dragState.visualX = x;
-                this.dragState.visualY = y;
-                // Offset so we drag from center of shape
-                this.dragState.offsetX = 0; 
-                this.dragState.offsetY = -80; // Lift it up slightly so finger doesn't cover it
+                // Post Processing (Triple-A Glow)
+                this.composer = new EffectComposer(this.renderer);
+                this.composer.addPass(new RenderPass(this.scene, this.camera));
+                
+                const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
+                bloomPass.threshold = CONFIG.bloomThreshold;
+                bloomPass.strength = CONFIG.bloomStrength;
+                bloomPass.radius = CONFIG.bloomRadius;
+                this.composer.addPass(bloomPass);
+
+                // Systems
+                this.player = new Player(this.scene);
+                this.obstacles = new ObstacleManager(this.scene);
+                this.env = new Environment(this.scene);
+
+                // Input
+                this.bindEvents();
+
+                // Start Loop
+                this.animate = this.animate.bind(this);
+                requestAnimationFrame(this.animate);
+
+                this.startGame();
+            }
+
+            bindEvents() {
+                window.addEventListener('resize', () => {
+                    this.camera.aspect = window.innerWidth / window.innerHeight;
+                    this.camera.updateProjectionMatrix();
+                    this.renderer.setSize(window.innerWidth, window.innerHeight);
+                    this.composer.setSize(window.innerWidth, window.innerHeight);
+                });
+
+                document.addEventListener('keydown', (e) => {
+                    if (this.state !== 'PLAYING') return;
+                    if (e.key === 'ArrowLeft' || e.key === 'a') this.player.move(-1);
+                    if (e.key === 'ArrowRight' || e.key === 'd') this.player.move(1);
+                });
+
+                // Mobile Touch
+                let touchStartX = 0;
+                document.addEventListener('touchstart', e => touchStartX = e.touches[0].clientX);
+                document.addEventListener('touchend', e => {
+                    if (this.state !== 'PLAYING') return;
+                    const deltaX = e.changedTouches[0].clientX - touchStartX;
+                    if (Math.abs(deltaX) > 30) {
+                        this.player.move(deltaX > 0 ? 1 : -1);
+                    }
+                });
+            }
+
+            startGame() {
+                this.state = 'PLAYING';
+                this.score = 0;
+                this.speed = CONFIG.baseSpeed;
+                this.player.reset();
+                this.obstacles.reset();
+                this.gameOverScreen.classList.remove('active');
+                this.clock.start();
+            }
+
+            gameOver() {
+                this.state = 'GAMEOVER';
+                this.gameOverScreen.classList.add('active');
+                
+                // Shake effect
+                const shakeIntensity = 0.5;
+                this.camera.position.x += (Math.random() - 0.5) * shakeIntensity;
+                this.camera.position.y += (Math.random() - 0.5) * shakeIntensity;
+            }
+
+            restart() {
+                this.startGame();
+            }
+
+            animate() {
+                requestAnimationFrame(this.animate);
+
+                const dt = this.clock.getDelta();
+                const time = this.clock.getElapsedTime();
+
+                if (this.state === 'PLAYING') {
+                    // Game Logic
+                    this.speed = Math.min(this.speed + CONFIG.acceleration, CONFIG.maxSpeed);
+                    this.score += Math.floor(this.speed * 10);
+                    this.scoreEl.innerText = this.score.toLocaleString();
+
+                    this.player.update(dt, time);
+                    this.obstacles.update(dt, this.speed, this.player.mesh);
+                    this.env.update(this.speed, dt);
+                    
+                    // Camera Follow with lag
+                    this.camera.position.x = MathUtils.lerp(this.camera.position.x, this.player.mesh.position.x * 0.3, dt * 2);
+                }
+
+                // Render via Composer for Bloom
+                this.composer.render();
             }
         }
-    }
 
-    handleInputMove(e) {
-        if (!this.dragState.active) return;
-        
-        const rect = this.canvas.getBoundingClientRect();
-        this.dragState.visualX = (e.clientX - rect.left);
-        this.dragState.visualY = (e.clientY - rect.top);
+        // Initialize Global Namespace
+        window.GameCore = new Engine();
 
-        // Snap Calculation
-        const shape = this.dragState.shape;
-        const cellSize = this.metrics.cellSize;
-        
-        // Calculate shape center in pixels
-        const shapePixelW = shape.width * cellSize;
-        const shapePixelH = shape.height * cellSize;
-        
-        const testX = this.dragState.visualX + this.dragState.offsetX - (shapePixelW / 2);
-        const testY = this.dragState.visualY + this.dragState.offsetY - (shapePixelH / 2);
-
-        // Convert to grid coords
-        const gx = Math.round((testX - this.metrics.gridX) / cellSize);
-        const gy = Math.round((testY - this.metrics.gridY) / cellSize);
-
-        this.dragState.targetGridX = gx;
-
-
+    </script>
+</body>
+</html>
+```
