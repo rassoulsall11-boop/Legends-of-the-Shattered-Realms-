@@ -38,17 +38,17 @@
     <h1 id="welcome">IDENTIFIÉ</h1>
     <button id="startBtn">DÉMARRER</button>
     <div id="leaderboard">
-        <div style="color:var(--primary); margin-bottom:10px; font-weight:bold;">TOP MONDIAL</div>
+        <div style="color:var(--primary); margin-bottom:10px; font-weight:bold;">TOP 5 MONDIAL</div>
         <div id="scores">Chargement des scores...</div>
     </div>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getAuth, signInWithRedirect, GoogleAuthProvider, onAuthStateChanged, getRedirectResult } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getAuth, signInWithRedirect, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
     import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, limit, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    // Tes configurations issues de l'image 3851.jpg
+    // Tes configurations officielles
     const firebaseConfig = {
         apiKey: "AIzaSyBBvuAx9E3M-zwGDrhZZkc",
         authDomain: "neon-vortex-d3d36.firebaseapp.com",
@@ -92,7 +92,7 @@
 
     function showMenu() {
         document.getElementById('menuScreen').classList.remove('hidden');
-        document.getElementById('welcome').innerText = profile.pseudo;
+        document.getElementById('welcome').innerText = "AGENT: " + profile.pseudo;
         
         // Branchement en temps réel au classement
         const q = query(collection(db, "players"), orderBy("score", "desc"), limit(5));
@@ -106,15 +106,15 @@
         });
     }
 
-    // --- LOGIQUE DU JEU ---
+    // --- JEU ---
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     let enemies = [], player = { x: 0, y: 0, tx: 0, ty: 0 }, score = 0, state = 'WAIT';
 
     function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
     window.addEventListener('resize', resize); resize();
-    const getPos = (e) => { const t = e.touches ? e.touches[0] : e; player.tx = t.clientX; player.ty = t.clientY; };
-    window.addEventListener('mousemove', getPos); window.addEventListener('touchstart', getPos); window.addEventListener('touchmove', getPos);
+    const pos = (e) => { const t = e.touches ? e.touches[0] : e; player.tx = t.clientX; player.ty = t.clientY; };
+    window.addEventListener('mousemove', pos); window.addEventListener('touchstart', pos); window.addEventListener('touchmove', pos);
 
     document.getElementById('startBtn').onclick = () => {
         document.getElementById('menuScreen').classList.add('hidden');
@@ -126,8 +126,8 @@
         ctx.fillStyle = 'black'; ctx.fillRect(0,0,canvas.width,canvas.height);
         if(state === 'PLAY') {
             score += 0.2;
-            if(Math.random() < 0.06) enemies.push({x: Math.random()*canvas.width, y: -20, s: 5+Math.random()*5});
-            player.x += (player.tx - player.x) * 0.12; player.y += (player.ty - player.y) * 0.12;
+            if(Math.random() < 0.05) enemies.push({x: Math.random()*canvas.width, y: -20, s: 4+Math.random()*4});
+            player.x += (player.tx - player.x) * 0.1; player.y += (player.ty - player.y) * 0.1;
             ctx.fillStyle = '#00f3ff'; ctx.beginPath(); ctx.arc(player.x, player.y, 12, 0, 7); ctx.fill();
             for(let i=enemies.length-1; i>=0; i--) {
                 enemies[i].y += enemies[i].s;
