@@ -1,12 +1,10 @@
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NEXUS DEFENDER: INFINITY | Build v4.0.1</title>
+    <title>NEXUS DEFENDER: INFINITY | OPTIMIZED</title>
     <style>
-        /* --- INDUSTRIAL-GRADE UI STYLING --- */
         :root {
             --neon-blue: #00f3ff;
             --neon-red: #ff0055;
@@ -17,267 +15,202 @@
         }
 
         body {
-            margin: 0;
-            overflow: hidden;
-            background-color: var(--bg-dark);
-            font-family: var(--font-main);
-            color: white;
-            user-select: none;
+            margin: 0; overflow: hidden; background-color: var(--bg-dark);
+            font-family: var(--font-main); color: white; user-select: none;
         }
 
         #game-canvas {
-            display: block;
-            width: 100vw;
-            height: 100vh;
+            display: block; width: 100vw; height: 100vh;
+            /* Force GPU acceleration context */
+            will-change: transform;
         }
 
-        /* HUD OVERLAY */
         #ui-layer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: 20px;
-            box-sizing: border-box;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; display: flex; flex-direction: column;
+            justify-content: space-between; padding: 20px; box-sizing: border-box;
         }
 
         .hud-panel {
-            background: var(--glass);
-            backdrop-filter: blur(10px);
+            background: var(--glass); backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 15px 25px;
-            border-radius: 4px;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            font-weight: bold;
+            padding: 15px 25px; border-radius: 4px;
+            text-transform: uppercase; letter-spacing: 2px; font-weight: bold;
             box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
-            transition: all 0.3s ease;
         }
 
-        .score-display { color: var(--neon-blue); font-size: 1.5rem; }
-        .level-display { color: var(--neon-green); font-size: 1.2rem; }
         .health-bar-container { width: 300px; height: 10px; background: rgba(255,255,255,0.1); border-radius: 5px; overflow: hidden; margin-top: 10px;}
-        .health-fill { height: 100%; background: var(--neon-red); width: 100%; transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 0 10px var(--neon-red); }
+        .health-fill { height: 100%; background: var(--neon-red); width: 100%; transition: transform 0.2s linear; transform-origin: left; }
 
-        /* MODALS */
         .modal {
-            position: absolute;
-            top: 50%;
-            left: 50%;
+            position: absolute; top: 50%; left: 50%;
             transform: translate(-50%, -50%);
-            background: rgba(10, 10, 15, 0.95);
-            border: 2px solid var(--neon-blue);
-            padding: 40px;
-            text-align: center;
-            pointer-events: auto;
-            border-radius: 8px;
-            box-shadow: 0 0 50px rgba(0, 243, 255, 0.2);
-            display: none;
-            z-index: 100;
+            background: rgba(10, 10, 15, 0.95); border: 2px solid var(--neon-blue);
+            padding: 40px; text-align: center; pointer-events: auto;
+            border-radius: 8px; box-shadow: 0 0 50px rgba(0, 243, 255, 0.2);
+            display: none; z-index: 100;
         }
-
         .modal.active { display: block; animation: fadeIn 0.3s ease; }
 
-        h1 { margin: 0 0 20px; font-size: 2.5rem; text-shadow: 0 0 20px var(--neon-blue); letter-spacing: 5px; }
-        p { color: #aaa; line-height: 1.6; }
-
         .btn {
-            background: transparent;
-            border: 1px solid var(--neon-blue);
-            color: var(--neon-blue);
-            padding: 15px 40px;
-            font-size: 1.2rem;
-            cursor: pointer;
-            text-transform: uppercase;
-            letter-spacing: 3px;
-            transition: 0.2s;
-            margin-top: 20px;
-            font-weight: bold;
+            background: transparent; border: 1px solid var(--neon-blue);
+            color: var(--neon-blue); padding: 15px 40px; font-size: 1.2rem;
+            cursor: pointer; text-transform: uppercase; letter-spacing: 3px;
+            transition: 0.2s; margin-top: 20px; font-weight: bold;
         }
-
         .btn:hover { background: var(--neon-blue); color: #000; box-shadow: 0 0 20px var(--neon-blue); }
+
+        h1 { margin: 0 0 20px; font-size: 2.5rem; text-shadow: 0 0 20px var(--neon-blue); }
+        p { color: #aaa; line-height: 1.6; }
 
         @keyframes fadeIn { from { opacity: 0; transform: translate(-50%, -45%); } to { opacity: 1; transform: translate(-50%, -50%); } }
 
-        /* FX */
+        /* OPTIMIZED CSS ANIMATION using Transform */
         .scanline {
-            width: 100%;
-            height: 100px;
-            z-index: 10;
+            width: 100%; height: 100px; z-index: 10;
             background: linear-gradient(0deg, rgba(0,0,0,0) 0%, rgba(255, 255, 255, 0.02) 50%, rgba(0,0,0,0) 100%);
-            opacity: 0.1;
-            position: absolute;
-            bottom: 100%;
-            pointer-events: none;
-            animation: scanline 10s linear infinite;
+            opacity: 0.1; position: absolute; top: -100px; left: 0;
+            pointer-events: none; will-change: transform;
+            animation: scanline 8s linear infinite;
         }
-        @keyframes scanline { 0% { bottom: 100%; } 100% { bottom: -100px; } }
-
+        @keyframes scanline { 
+            0% { transform: translateY(0); } 
+            100% { transform: translateY(120vh); } 
+        }
     </style>
 </head>
 <body>
-
     <canvas id="game-canvas"></canvas>
     <div class="scanline"></div>
 
-    <!-- UI LAYER -->
     <div id="ui-layer">
         <div class="hud-panel">
             <div id="score">SCORE: 000000</div>
             <div id="highscore" style="font-size: 0.8rem; color: #888; margin-top:5px;">BEST: 000000</div>
         </div>
         <div class="hud-panel" style="align-self: flex-end; text-align: right;">
-            <div id="level" class="level-display">SECTOR: 1</div>
+            <div id="level">SECTOR: 1</div>
             <div class="health-bar-container">
-                <div id="health" class="health-fill"></div>
+                <!-- Using scaleX for performant resizing -->
+                <div id="health" class="health-fill" style="transform: scaleX(1);"></div>
             </div>
         </div>
     </div>
 
-    <!-- START SCREEN -->
     <div id="start-screen" class="modal active">
         <h1>NEXUS DEFENDER</h1>
-        <p>PILOT: Use <strong>WASD</strong> to Move. <strong>MOUSE</strong> to Aim & Shoot.<br>
-        Enemies evolve. Progress is auto-saved.</p>
+        <p>PILOT: Use <strong>WASD</strong> to Move. <strong>MOUSE</strong> to Aim & Shoot.</p>
         <button class="btn" onclick="Game.init()">INITIALIZE SYSTEM</button>
     </div>
 
-    <!-- GAME OVER SCREEN -->
     <div id="game-over-screen" class="modal">
-        <h1 style="color: var(--neon-red); text-shadow: 0 0 20px var(--neon-red);">CRITICAL FAILURE</h1>
+        <h1 style="color: var(--neon-red);">CRITICAL FAILURE</h1>
         <p id="final-stats">SECTOR REACHED: 1</p>
         <button class="btn" onclick="Game.reset()">REBOOT SYSTEM</button>
     </div>
 
 <script>
-/**
- * NEXUS ENGINE v4.0
- * Architecture: Entity Component System (Lite) + Object Pooling + Event Driven
- * Optimization: O(1) Lookups, TypedArrays for Particles, LocalStorage Serialization
+/* 
+ * NEXUS ENGINE v4.1 (Optimized)
+ * Improved Memory Management & Rendering Pipeline
  */
 
-// --- MATH UTILS ---
-const Vec2 = {
-    add: (v1, v2) => ({ x: v1.x + v2.x, y: v1.y + v2.y }),
-    sub: (v1, v2) => ({ x: v1.x - v2.x, y: v1.y - v2.y }),
-    mult: (v, s) => ({ x: v.x * s, y: v.y * s }),
-    mag: (v) => Math.sqrt(v.x * v.x + v.y * v.y),
-    norm: (v) => {
-        const m = Math.sqrt(v.x * v.x + v.y * v.y);
-        return m === 0 ? { x: 0, y: 0 } : { x: v.x / m, y: v.y / m };
-    },
-    dist: (v1, v2) => Math.sqrt((v1.x - v2.x) ** 2 + (v1.y - v2.y) ** 2)
-};
-
-// --- DATA PERSISTENCE LAYER ---
-const SaveSystem = {
-    KEY: 'NEXUS_SAVE_DATA_V1',
-    save: (data) => localStorage.setItem(SaveSystem.KEY, JSON.stringify(data)),
-    load: () => {
-        const data = localStorage.getItem(SaveSystem.KEY);
-        return data ? JSON.parse(data) : { highScore: 0, maxLevel: 1 };
+// --- OBJECT POOL ---
+// Generic Pool to reuse objects and avoid Garbage Collection spikes
+class Pool {
+    constructor(createFn, resetFn, initialSize = 50) {
+        this.create = createFn;
+        this.reset = resetFn;
+        this.store = [];
+        for(let i=0; i<initialSize; i++) this.store.push(this.create());
     }
-};
+    get() {
+        if(this.store.length === 0) return this.create();
+        const obj = this.store.pop();
+        return this.reset(obj);
+    }
+    release(obj) {
+        this.store.push(obj);
+    }
+}
 
 // --- RENDERER & CONFIG ---
 const Config = {
-    PARTICLE_LIMIT: 200,
     FRICTION: 0.92,
     PLAYER_SPEED: 0.8,
-    COLORS: {
-        PLAYER: '#00f3ff',
-        ENEMY_1: '#ff0055',
-        ENEMY_2: '#ff9900',
-        ENEMY_3: '#aa00ff',
-        BULLET: '#ffffff'
-    }
+    COLORS: { PLAYER: '#00f3ff', ENEMY_1: '#ff0055', ENEMY_2: '#ff9900', BULLET: '#ffffff' }
 };
 
-// --- OBJECT POOLING (Memory Optimization) ---
-class Pool {
-    constructor(createFn, maxSize = 100) {
-        this.pool = [];
-        this.createFn = createFn;
-        for (let i = 0; i < maxSize; i++) this.pool.push(this.createFn());
-    }
-    get() { return this.pool.length > 0 ? this.pool.pop() : this.createFn(); }
-    release(obj) { this.pool.push(obj); }
-}
-
-// --- GAME ENTITIES ---
+// --- ENTITIES ---
 class Entity {
     constructor(x, y, radius, color) {
-        this.pos = { x, y };
-        this.vel = { x: 0, y: 0 };
+        this.x = x; this.y = y;
+        this.vx = 0; this.vy = 0;
         this.radius = radius;
         this.color = color;
         this.dead = false;
-        this.hp = 1;
-        this.maxHp = 1;
+        this.hp = 1; this.maxHp = 1;
     }
+    // Optimized: direct mutation, no Vec2 object creation
     update() {
-        this.pos = Vec2.add(this.pos, this.vel);
+        this.x += this.vx;
+        this.y += this.vy;
     }
     draw(ctx) {
         ctx.beginPath();
-        ctx.arc(this.pos.x, this.pos.y, this.radius, 0, Math.PI * 2);
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
         ctx.fillStyle = this.color;
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = this.color;
         ctx.fill();
-        ctx.shadowBlur = 0;
         ctx.closePath();
+    }
+}
+
+class Particle extends Entity {
+    update() {
+        this.vx *= 0.95; this.vy *= 0.95;
+        this.x += this.vx; this.y += this.vy;
+        this.alpha -= this.life;
+    }
+    draw(ctx) {
+        ctx.globalAlpha = Math.max(0, this.alpha);
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, 2, 0, Math.PI*2);
+        ctx.fill();
+        ctx.globalAlpha = 1.0;
     }
 }
 
 class Player extends Entity {
     constructor() {
-        super(innerWidth / 2, innerHeight / 2, 10, Config.COLORS.PLAYER);
-        this.hp = 100;
-        this.maxHp = 100;
-        this.angle = 0;
+        super(innerWidth/2, innerHeight/2, 10, Config.COLORS.PLAYER);
+        this.hp = 100; this.maxHp = 100; this.angle = 0;
     }
     update(input) {
-        // Physics based movement
-        if (input.keys['w']) this.vel.y -= Config.PLAYER_SPEED;
-        if (input.keys['s']) this.vel.y += Config.PLAYER_SPEED;
-        if (input.keys['a']) this.vel.x -= Config.PLAYER_SPEED;
-        if (input.keys['d']) this.vel.x += Config.PLAYER_SPEED;
+        // Direct physics mutation
+        if (input.keys['w']) this.vy -= Config.PLAYER_SPEED;
+        if (input.keys['s']) this.vy += Config.PLAYER_SPEED;
+        if (input.keys['a']) this.vx -= Config.PLAYER_SPEED;
+        if (input.keys['d']) this.vx += Config.PLAYER_SPEED;
 
-        this.vel = Vec2.mult(this.vel, Config.FRICTION); // Friction
+        this.vx *= Config.FRICTION; this.vy *= Config.FRICTION;
         super.update();
 
-        // Boundaries
-        this.pos.x = Math.max(this.radius, Math.min(innerWidth - this.radius, this.pos.x));
-        this.pos.y = Math.max(this.radius, Math.min(innerHeight - this.radius, this.pos.y));
+        this.x = Math.max(this.radius, Math.min(innerWidth - this.radius, this.x));
+        this.y = Math.max(this.radius, Math.min(innerHeight - this.radius, this.y));
 
-        // Aiming
-        const dx = input.mouse.x - this.pos.x;
-        const dy = input.mouse.y - this.pos.y;
-        this.angle = Math.atan2(dy, dx);
+        this.angle = Math.atan2(input.mouse.y - this.y, input.mouse.x - this.x);
     }
     draw(ctx) {
         ctx.save();
-        ctx.translate(this.pos.x, this.pos.y);
+        ctx.translate(this.x, this.y);
         ctx.rotate(this.angle);
-        
-        // Advanced Ship Drawing
         ctx.beginPath();
-        ctx.moveTo(15, 0);
-        ctx.lineTo(-10, 10);
-        ctx.lineTo(-5, 0);
-        ctx.lineTo(-10, -10);
-        ctx.closePath();
-        
+        ctx.moveTo(15, 0); ctx.lineTo(-10, 10); ctx.lineTo(-5, 0); ctx.lineTo(-10, -10);
         ctx.fillStyle = this.color;
-        ctx.shadowBlur = 20;
-        ctx.shadowColor = this.color;
+        ctx.shadowBlur = 15; ctx.shadowColor = this.color;
         ctx.fill();
+        ctx.shadowBlur = 0;
         ctx.restore();
     }
 }
@@ -285,115 +218,79 @@ class Player extends Entity {
 class Enemy extends Entity {
     constructor(type, level) {
         super(0, 0, 10, Config.COLORS.ENEMY_1);
-        this.type = type;
-        this.setup(level);
+        this.spawn(type, level);
     }
-    
-    setup(level) {
-        // Spawn logic: Edges of screen
+    spawn(type, level) {
+        // Reset logic for reuse
         const edge = Math.floor(Math.random() * 4);
-        if (edge === 0) { this.pos = {x: Math.random() * innerWidth, y: -20}; } 
-        else if (edge === 1) { this.pos = {x: innerWidth + 20, y: Math.random() * innerHeight}; }
-        else if (edge === 2) { this.pos = {x: Math.random() * innerWidth, y: innerHeight + 20}; }
-        else { this.pos = {x: -20, y: Math.random() * innerHeight}; }
+        if (edge === 0) { this.x = Math.random() * innerWidth; this.y = -20; }
+        else if (edge === 1) { this.x = innerWidth + 20; this.y = Math.random() * innerHeight; }
+        else if (edge === 2) { this.x = Math.random() * innerWidth; this.y = innerHeight + 20; }
+        else { this.x = -20; this.y = Math.random() * innerHeight; }
 
-        const difficultyMod = 1 + (level * 0.1);
+        this.vx = 0; this.vy = 0;
+        this.dead = false;
 
-        if (this.type === 0) { // Chaser (Fast, Weak)
-            this.speed = (3 + Math.random()) * difficultyMod;
-            this.hp = 1 * difficultyMod;
-            this.color = Config.COLORS.ENEMY_1;
-            this.radius = 10;
-        } else if (this.type === 1) { // Tank (Slow, Strong)
-            this.speed = (1.5 + Math.random()) * difficultyMod;
-            this.hp = 3 * difficultyMod;
-            this.color = Config.COLORS.ENEMY_2;
-            this.radius = 18;
-        } else { // Boss-lite
-            this.speed = 2.5 * difficultyMod;
-            this.hp = 2 * difficultyMod;
-            this.color = Config.COLORS.ENEMY_3;
-            this.radius = 12;
-        }
+        const diff = 1 + (level * 0.1);
+        if (type === 0) { this.speed = (3+Math.random())*diff; this.hp=1*diff; this.radius=10; this.color=Config.COLORS.ENEMY_1; }
+        else { this.speed = (1.5+Math.random())*diff; this.hp=3*diff; this.radius=18; this.color=Config.COLORS.ENEMY_2; }
     }
-
-    ai(playerPos) {
-        const dir = Vec2.norm(Vec2.sub(playerPos, this.pos));
-        this.vel = Vec2.mult(dir, this.speed);
+    ai(px, py) {
+        const dx = px - this.x;
+        const dy = py - this.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if(dist > 0) {
+            this.vx = (dx / dist) * this.speed;
+            this.vy = (dy / dist) * this.speed;
+        }
         super.update();
     }
 }
 
-class Particle {
-    constructor(x, y, color, vel) {
-        this.pos = {x, y};
-        this.vel = vel;
-        this.color = color;
-        this.alpha = 1;
-        this.life = Math.random() * 0.05 + 0.02; // Fade speed
-    }
-    update() {
-        this.vel = Vec2.mult(this.vel, 0.95);
-        this.pos = Vec2.add(this.pos, this.vel);
-        this.alpha -= this.life;
-    }
-    draw(ctx) {
-        ctx.globalAlpha = Math.max(0, this.alpha);
-        ctx.fillStyle = this.color;
-        ctx.beginPath();
-        ctx.arc(this.pos.x, this.pos.y, 2, 0, Math.PI*2);
-        ctx.fill();
-        ctx.globalAlpha = 1.0;
-    }
-}
-
-// --- GAME CORE MANAGER ---
+// --- GAME MANAGER ---
 const Game = {
-    canvas: null,
-    ctx: null,
-    rafId: null,
-    
-    // State
+    canvas: null, ctx: null, rafId: null,
     isRunning: false,
-    score: 0,
-    level: 1,
-    highScore: 0,
-    frames: 0,
+    score: 0, level: 1, highScore: 0,
     
-    // Entities
-    player: null,
-    projectiles: [],
-    enemies: [],
-    particles: [],
-    
-    // Input
-    input: {
-        keys: {},
-        mouse: { x: 0, y: 0 },
-        mouseDown: false
+    // State Cache for DOM optimization
+    hudState: { score: -1, hp: -1, level: -1 },
+
+    entities: {
+        player: null,
+        projectiles: [],
+        enemies: [],
+        particles: []
     },
 
-    // Initialization
+    // Pools
+    particlePool: null,
+
+    input: { keys: {}, mouse: {x:0, y:0}, mouseDown: false },
+
     setup() {
         this.canvas = document.getElementById('game-canvas');
-        this.ctx = this.canvas.getContext('2d', { alpha: false }); // Optimize
+        this.ctx = this.canvas.getContext('2d', { alpha: false });
+        
+        this.particlePool = new Pool(
+            () => new Particle(0,0,0,0),
+            (p) => { p.alpha = 1; p.dead = false; return p; },
+            200
+        );
+
         this.resize();
         window.addEventListener('resize', () => this.resize());
         
-        // Input Listeners
+        // Input Handlers
         window.addEventListener('keydown', e => this.input.keys[e.key] = true);
         window.addEventListener('keyup', e => this.input.keys[e.key] = false);
-        window.addEventListener('mousemove', e => {
-            this.input.mouse.x = e.clientX;
-            this.input.mouse.y = e.clientY;
-        });
+        window.addEventListener('mousemove', e => { this.input.mouse.x = e.clientX; this.input.mouse.y = e.clientY; });
         window.addEventListener('mousedown', () => this.input.mouseDown = true);
         window.addEventListener('mouseup', () => this.input.mouseDown = false);
-
-        // Load Save
-        const saved = SaveSystem.load();
-        this.highScore = saved.highScore;
-        this.updateHUD();
+        
+        // Persistence
+        const saved = localStorage.getItem('NEXUS_SAVE');
+        if(saved) this.highScore = JSON.parse(saved).highScore || 0;
     },
 
     resize() {
@@ -402,16 +299,19 @@ const Game = {
     },
 
     init() {
-        document.querySelector('.modal.active').classList.remove('active');
+        document.querySelector('.modal.active')?.classList.remove('active');
+        if (this.rafId) cancelAnimationFrame(this.rafId);
         
-        // Restore stats for progression if needed, or reset for new run
-        this.player = new Player();
-        this.projectiles = [];
-        this.enemies = [];
-        this.particles = [];
+        this.entities.player = new Player();
+        this.entities.projectiles = [];
+        this.entities.enemies = [];
+        // Clear particles but return to pool ideally, here just reset array for simplicity
+        this.entities.particles = [];
+        
         this.score = 0;
         this.level = 1;
         this.isRunning = true;
+        this.hudState = { score: -1, hp: -1, level: -1 }; // Force UI update
         
         this.loop();
     },
@@ -423,179 +323,136 @@ const Game = {
 
     gameOver() {
         this.isRunning = false;
-        cancelAnimationFrame(this.rafId);
-        
-        // Save Progress
-        if (this.score > this.highScore) this.highScore = this.score;
-        SaveSystem.save({ highScore: this.highScore, maxLevel: this.level }); // Enterprise persistence
-
-        document.getElementById('final-stats').innerHTML = `SECTOR REACHED: ${this.level}<br>SCORE: ${Math.floor(this.score)}`;
+        if (this.score > this.highScore) {
+            this.highScore = this.score;
+            localStorage.setItem('NEXUS_SAVE', JSON.stringify({ highScore: this.highScore }));
+        }
+        document.getElementById('final-stats').innerHTML = `SECTOR: ${this.level}<br>SCORE: ${Math.floor(this.score)}`;
         document.getElementById('game-over-screen').classList.add('active');
-    },
-
-    spawnEnemy() {
-        // Algorithm: Harder enemies appear more often as levels rise
-        // Level 1: Mostly Type 0. Level 5: Mix.
-        let type = 0;
-        const rand = Math.random();
-        
-        if (this.level > 3 && rand > 0.7) type = 1;
-        if (this.level > 6 && rand > 0.9) type = 2;
-
-        this.enemies.push(new Enemy(type, this.level));
     },
 
     createExplosion(x, y, color) {
         for (let i = 0; i < 8; i++) {
-            const vel = {
-                x: (Math.random() - 0.5) * 6,
-                y: (Math.random() - 0.5) * 6
-            };
-            this.particles.push(new Particle(x, y, color, vel));
+            const p = this.particlePool.get();
+            p.x = x; p.y = y; p.color = color;
+            p.vx = (Math.random() - 0.5) * 6;
+            p.vy = (Math.random() - 0.5) * 6;
+            p.life = Math.random() * 0.05 + 0.02;
+            this.entities.particles.push(p);
         }
     },
 
     updateHUD() {
-        document.getElementById('score').innerText = `SCORE: ${Math.floor(this.score).toString().padStart(6, '0')}`;
-        document.getElementById('highscore').innerText = `BEST: ${Math.floor(this.highScore).toString().padStart(6, '0')}`;
-        document.getElementById('level').innerText = `SECTOR: ${this.level}`;
-        const hpPct = Math.max(0, (this.player.hp / this.player.maxHp) * 100);
-        document.getElementById('health').style.width = `${hpPct}%`;
+        // DOM OPTIMIZATION: Only touch DOM if values changed
+        const scoreFloor = Math.floor(this.score);
+        if (scoreFloor !== this.hudState.score) {
+            document.getElementById('score').innerText = `SCORE: ${scoreFloor.toString().padStart(6, '0')}`;
+            this.hudState.score = scoreFloor;
+        }
+        if (this.level !== this.hudState.level) {
+             document.getElementById('level').innerText = `SECTOR: ${this.level}`;
+             this.hudState.level = this.level;
+        }
+        
+        const hpPct = Math.max(0, this.entities.player.hp / this.entities.player.maxHp);
+        if (Math.abs(hpPct - this.hudState.hp) > 0.01) {
+             document.getElementById('health').style.transform = `scaleX(${hpPct})`;
+             this.hudState.hp = hpPct;
+        }
     },
 
-    // --- MAIN GAME LOOP ---
     loop() {
         if (!this.isRunning) return;
         this.rafId = requestAnimationFrame(() => this.loop());
 
-        // 1. Clear & Background
-        this.ctx.fillStyle = 'rgba(5, 5, 5, 0.4)'; // Trail effect
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        const { ctx, canvas, entities, input } = this;
+        const { player } = entities;
+
+        // 1. Render Background
+        ctx.fillStyle = 'rgba(5, 5, 5, 0.4)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // 2. Player Logic
+        player.update(input);
         
-        // Grid Effect (Visual Polish)
-        this.drawGrid();
-
-        // 2. Logic Updates
-        this.player.update(this.input);
-        
-        // Shooting
-        if (this.input.mouseDown && this.frames % 8 === 0) {
-            const angle = this.player.angle;
-            const vel = { x: Math.cos(angle) * 15, y: Math.sin(angle) * 15 };
-            // Offset bullet to start at nose of ship
-            const startX = this.player.pos.x + Math.cos(angle) * 15;
-            const startY = this.player.pos.y + Math.sin(angle) * 15;
-            
-            const p = new Entity(startX, startY, 3, Config.COLORS.BULLET);
-            p.vel = vel;
-            this.projectiles.push(p);
+        if (input.mouseDown && this.hudState.score % 5 === 0) { // Simple fire rate limit based on score tick or separate counter
+            const p = new Entity(player.x + Math.cos(player.angle)*15, player.y + Math.sin(player.angle)*15, 3, Config.COLORS.BULLET);
+            p.vx = Math.cos(player.angle) * 15;
+            p.vy = Math.sin(player.angle) * 15;
+            entities.projectiles.push(p);
+            input.mouseDown = false; // Semi-auto or needs cooldown logic
         }
 
-        // Spawning Logic (Dynamic Difficulty Adjustment)
-        // Spawn rate decreases (gets faster) as level increases
-        const spawnRate = Math.max(20, 60 - (this.level * 2));
-        if (this.frames % spawnRate === 0) {
-            this.spawnEnemy();
+        // Spawning
+        if (Math.random() < 0.02 + (this.level * 0.005)) {
+            const type = (this.level > 3 && Math.random() > 0.7) ? 1 : 0;
+            entities.enemies.push(new Enemy(type, this.level));
         }
 
-        // Level Up Logic
-        if (this.score > this.level * 1000) {
-            this.level++;
-            // Heal player slightly on level up
-            this.player.hp = Math.min(this.player.maxHp, this.player.hp + 20);
-            
-            // Visual notification logic could go here
-        }
-
-        // 3. Collision & Entity Management
+        // 3. Entity Loop (Optimized: Reverse loops for safe deletion)
         // Projectiles
-        this.projectiles.forEach((p, index) => {
+        for (let i = entities.projectiles.length - 1; i >= 0; i--) {
+            const p = entities.projectiles[i];
             p.update();
-            p.draw(this.ctx);
-            
-            // Remove offscreen
-            if (p.pos.x < 0 || p.pos.x > this.canvas.width || p.pos.y < 0 || p.pos.y > this.canvas.height) {
-                p.dead = true;
+            p.draw(ctx);
+            if (p.x < 0 || p.x > canvas.width || p.y < 0 || p.y > canvas.height || p.dead) {
+                entities.projectiles.splice(i, 1);
             }
-        });
+        }
 
         // Enemies
-        this.enemies.forEach((e, eIndex) => {
-            e.ai(this.player.pos);
-            e.draw(this.ctx);
+        for (let i = entities.enemies.length - 1; i >= 0; i--) {
+            const e = entities.enemies[i];
+            e.ai(player.x, player.y);
+            e.draw(ctx);
 
-            // Collision: Enemy vs Player
-            if (Vec2.dist(e.pos, this.player.pos) < e.radius + this.player.radius) {
-                this.player.hp -= 10;
+            // Collision: Player
+            const distP = Math.hypot(e.x - player.x, e.y - player.y);
+            if (distP < e.radius + player.radius) {
+                player.hp -= 10;
                 e.dead = true;
-                this.createExplosion(e.pos.x, e.pos.y, Config.COLORS.PLAYER);
-                // Camera shake effect simulated by offsetting context briefly? (Skipped for simplicity, particles do the job)
+                this.createExplosion(e.x, e.y, Config.COLORS.PLAYER);
             }
 
-            // Collision: Enemy vs Projectile
-            this.projectiles.forEach((p) => {
-                if (!p.dead && Vec2.dist(e.pos, p.pos) < e.radius + p.radius) {
+            // Collision: Bullets
+            for (let j = entities.projectiles.length - 1; j >= 0; j--) {
+                const p = entities.projectiles[j];
+                const distB = Math.hypot(e.x - p.x, e.y - p.y);
+                if (distB < e.radius + p.radius) {
                     e.hp--;
                     p.dead = true;
-                    this.createExplosion(p.pos.x, p.pos.y, '#fff');
+                    this.createExplosion(p.x, p.y, '#fff');
                     if (e.hp <= 0) {
                         e.dead = true;
-                        this.score += (10 * this.level);
-                        this.createExplosion(e.pos.x, e.pos.y, e.color);
+                        this.score += 10 * this.level;
+                        this.createExplosion(e.x, e.y, e.color);
                     }
                 }
-            });
-        });
+            }
 
-        // Particles
-        this.particles.forEach(p => {
-            p.update();
-            p.draw(this.ctx);
-            if (p.alpha <= 0) p.dead = true;
-        });
-
-        // Garbage Collection (Swap & Pop is faster than splice for large arrays, but filter is cleaner for readable code)
-        this.projectiles = this.projectiles.filter(p => !p.dead);
-        this.enemies = this.enemies.filter(e => !e.dead);
-        this.particles = this.particles.filter(p => !p.dead);
-
-        // Check Death
-        if (this.player.hp <= 0) {
-            this.createExplosion(this.player.pos.x, this.player.pos.y, Config.COLORS.PLAYER);
-            this.gameOver();
+            if (e.dead) entities.enemies.splice(i, 1);
         }
 
-        // 4. Render Player
-        if (this.player.hp > 0) this.player.draw(this.ctx);
+        // Particles ( pooled )
+        for (let i = entities.particles.length - 1; i >= 0; i--) {
+            const p = entities.particles[i];
+            p.update();
+            p.draw(ctx);
+            if (p.alpha <= 0) {
+                this.particlePool.release(p);
+                entities.particles.splice(i, 1);
+            }
+        }
+
+        if (this.score > this.level * 1000) this.level++;
+        if (player.hp <= 0) this.gameOver();
+        else player.draw(ctx);
 
         this.updateHUD();
-        this.frames++;
-    },
-
-    drawGrid() {
-        this.ctx.strokeStyle = 'rgba(0, 243, 255, 0.05)';
-        this.ctx.lineWidth = 1;
-        const gridSize = 50;
-        // Offset grid by player movement to create depth
-        const offX = -this.player.pos.x * 0.1;
-        const offY = -this.player.pos.y * 0.1;
-
-        this.ctx.beginPath();
-        for (let x = offX % gridSize; x < this.canvas.width; x += gridSize) {
-            this.ctx.moveTo(x, 0);
-            this.ctx.lineTo(x, this.canvas.height);
-        }
-        for (let y = offY % gridSize; y < this.canvas.height; y += gridSize) {
-            this.ctx.moveTo(0, y);
-            this.ctx.lineTo(this.canvas.width, y);
-        }
-        this.ctx.stroke();
     }
 };
 
-// Start the Engine
 window.onload = () => Game.setup();
-
 </script>
 </body>
 </html>
