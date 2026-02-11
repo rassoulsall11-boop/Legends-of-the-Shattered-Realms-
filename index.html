@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NEON VORTEX: FIXED ENGINE</title>
+    <title>NEON VORTEX: ULTIMATE CHASE</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
         :root { --primary: #00f3ff; --secondary: #ff0055; --orange: #ff9800; --bg: #050505; --ui-font: 'Orbitron', sans-serif; }
@@ -35,20 +35,21 @@
 
 <div id="menu-overlay">
     <h1>NEON VORTEX</h1>
-    <div style="color: #666; margin: 20px 0; text-align: center; line-height: 1.6;">
-        RECORD: <span id="best-score" style="color: var(--primary)">0</span><br>
-        MEILLEUR NIVEAU: <span id="best-lvl" style="color: var(--primary)">1</span>
+    <div style="color: #666; margin: 20px 0; text-align: center;">
+        RECORD SCORE: <span id="best-score" style="color: var(--primary)">0</span><br>
+        RECORD NIVEAU: <span id="best-lvl" style="color: var(--primary)">1</span>
     </div>
     <div style="display: flex; flex-direction: column; gap: 15px;">
         <button class="btn" id="start-btn" style="font-size: 1.2rem; padding: 15px 40px;">NOUVELLE PARTIE</button>
-        <button class="btn hidden" id="resume-btn" style="border-color: var(--orange); color: var(--orange);">REPRENDRE AU NIVEAU <span id="resume-lvl-val">1</span></button>
+        <button class="btn hidden" id="resume-btn" style="border-color: var(--orange); color: var(--orange);">REPRENDRE LVL <span id="resume-lvl-val">1</span></button>
     </div>
 </div>
 
 <div id="game-over" class="hidden">
     <h1 style="background: var(--secondary); -webkit-background-clip: text;">ÉCHEC SYSTÈME</h1>
     <h2 id="final-score" style="color:white; margin: 20px 0;">Score: 0</h2>
-    <button class="btn" id="restart-btn">RÉINITIALISER</button>
+    <button class="btn" id="restart-btn">RECOMMENCER</button>
+    <button class="btn" onclick="location.reload()">MENU</button>
 </div>
 
 <canvas id="canvas"></canvas>
@@ -63,36 +64,37 @@ const GAME = {
     level: 1,
     levelTimer: 0,
     enemies: [],
-    player: { x: 0, y: 0, tx: 0, ty: 0, size: 12 },
+    player: { x: 0, y: 0, tx: 0, ty: 0 },
     lastTime: 0
 };
 
-// --- SYSTÈME DE SAUVEGARDE ---
+// --- SAUVEGARDE ---
 function saveGame() {
-    const bestScore = localStorage.getItem('vortex_score') || 0;
-    const bestLvl = localStorage.getItem('vortex_lvl') || 1;
-    if (GAME.score > bestScore) localStorage.setItem('vortex_score', Math.floor(GAME.score));
-    if (GAME.level > bestLvl) localStorage.setItem('vortex_lvl', GAME.level);
+    const bScore = localStorage.getItem('vortex_score') || 0;
+    const bLvl = localStorage.getItem('vortex_lvl') || 1;
+    if (GAME.score > bScore) localStorage.setItem('vortex_score', Math.floor(GAME.score));
+    if (GAME.level > bLvl) localStorage.setItem('vortex_lvl', GAME.level);
 }
 
 function loadStats() {
-    const score = localStorage.getItem('vortex_score') || 0;
-    const lvl = localStorage.getItem('vortex_lvl') || 1;
-    document.getElementById('best-score').innerText = score;
-    document.getElementById('best-lvl').innerText = lvl;
-    if(lvl > 1) {
+    const s = localStorage.getItem('vortex_score') || 0;
+    const l = localStorage.getItem('vortex_lvl') || 1;
+    document.getElementById('best-score').innerText = s;
+    document.getElementById('best-lvl').innerText = l;
+    if(l > 1) {
         document.getElementById('resume-btn').classList.remove('hidden');
-        document.getElementById('resume-lvl-val').innerText = lvl;
+        document.getElementById('resume-lvl-val').innerText = l;
     }
 }
 
-// --- ENNEMIS ---
+// --- ENNEMIS TRAQUEURS ---
 class Enemy {
     constructor(type, level) {
         this.type = type;
         this.size = 20;
         this.active = true;
-        this.speed = (160 + (level * 22)) * (type === 'orange' ? 0.75 : 1.1);
+        // Les orange sont un peu plus lents pour permettre l'esquive, mais ils sont collants !
+        this.speed = (150 + (level * 20)) * (type === 'orange' ? 0.75 : 1.1);
         
         const side = Math.floor(Math.random() * 4);
         if(side === 0) { this.x = Math.random()*canvas.width; this.y = -30; }
@@ -100,7 +102,7 @@ class Enemy {
         else if(side === 2) { this.x = Math.random()*canvas.width; this.y = canvas.height+30; }
         else { this.x = -30; this.y = Math.random()*canvas.height; }
 
-        const angle = Math.atan2(GAME.player.y - this.y, GAME.player.x - this.x) + (Math.random() - 0.5);
+        const angle = Math.atan2(GAME.player.y - this.y, GAME.player.x - this.x);
         this.vx = Math.cos(angle) * this.speed;
         this.vy = Math.sin(angle) * this.speed;
     }
@@ -109,20 +111,22 @@ class Enemy {
         if(this.type === 'red') {
             this.x += this.vx * dt;
             this.y += this.vy * dt;
+            // Les rouges disparaissent s'ils sortent
+            if(this.x < -100 || this.x > canvas.width+100 || this.y < -100 || this.y > canvas.height+100) this.active = false;
         } else {
+            // ORANGE : TRAQUE PERMANENTE
             const angle = Math.atan2(GAME.player.y - this.y, GAME.player.x - this.x);
             this.x += Math.cos(angle) * this.speed * dt;
             this.y += Math.sin(angle) * this.speed * dt;
+            // Les oranges ne meurent jamais de sortie d'écran, ils reviennent toujours
         }
-        if(this.x < -150 || this.x > canvas.width+150 || this.y < -150 || this.y > canvas.height+150) this.active = false;
     }
 }
 
-// --- LOGIQUE CORE ---
+// --- ENGINE ---
 function init() {
     window.addEventListener('resize', () => {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+        canvas.width = window.innerWidth; canvas.height = window.innerHeight;
     });
     window.dispatchEvent(new Event('resize'));
 
@@ -144,7 +148,7 @@ function init() {
 
 function start(lvl) {
     GAME.level = lvl;
-    GAME.score = (lvl - 1) * 150;
+    GAME.score = (lvl - 1) * 120;
     GAME.levelTimer = 0;
     GAME.enemies = [];
     GAME.player.x = GAME.player.tx = canvas.width/2;
@@ -178,21 +182,18 @@ function resumeCountdown() {
 function mainLoop(t) {
     const dt = Math.min(0.1, (t - GAME.lastTime) / 1000);
     GAME.lastTime = t;
-
-    if(GAME.state === 'PLAYING') {
-        update(dt);
-    }
+    if(GAME.state === 'PLAYING') update(dt);
     draw();
     requestAnimationFrame(mainLoop);
 }
 
 function update(dt) {
-    GAME.score += dt * 12;
+    GAME.score += dt * 10;
     GAME.levelTimer += dt;
     if(GAME.levelTimer > 10) { GAME.level++; GAME.levelTimer = 0; saveGame(); }
 
-    if(Math.random() < (0.02 + GAME.level * 0.01)) {
-        const type = (GAME.level >= 3 && Math.random() > 0.75) ? 'orange' : 'red';
+    if(Math.random() < (0.015 + GAME.level * 0.008)) {
+        const type = (GAME.level >= 3 && Math.random() > 0.8) ? 'orange' : 'red';
         GAME.enemies.push(new Enemy(type, GAME.level));
     }
 
@@ -221,7 +222,7 @@ function draw() {
 
     GAME.enemies.forEach(e => {
         ctx.fillStyle = e.type === 'red' ? '#ff0055' : '#ff9800';
-        ctx.shadowBlur = 10; ctx.shadowColor = ctx.fillStyle;
+        ctx.shadowBlur = 15; ctx.shadowColor = ctx.fillStyle;
         ctx.fillRect(e.x - 10, e.y - 10, 20, 20);
     });
 
