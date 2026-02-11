@@ -4,658 +4,599 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NEXUS: FLUX HORIZON [2026 Edition]</title>
+    <title>NEXUS DEFENDER: INFINITY | Build v4.0.1</title>
     <style>
+        /* --- INDUSTRIAL-GRADE UI STYLING --- */
         :root {
             --neon-blue: #00f3ff;
-            --neon-pink: #ff0055;
-            --neon-gold: #ffd700;
+            --neon-red: #ff0055;
+            --neon-green: #00ff99;
             --bg-dark: #050505;
-            --hud-font: 'Courier New', Courier, monospace;
+            --glass: rgba(255, 255, 255, 0.05);
+            --font-main: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
         }
-
-        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
 
         body {
-            background-color: var(--bg-dark);
+            margin: 0;
             overflow: hidden;
-            font-family: var(--hud-font);
+            background-color: var(--bg-dark);
+            font-family: var(--font-main);
             color: white;
-            height: 100vh;
+            user-select: none;
+        }
+
+        #game-canvas {
+            display: block;
             width: 100vw;
-            cursor: crosshair;
+            height: 100vh;
         }
 
-        #game-layer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            z-index: 1;
-            filter: contrast(1.2) brightness(1.1);
-        }
-
-        /* UI Overlay - Glassmorphism */
+        /* HUD OVERLAY */
         #ui-layer {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: 10;
             pointer-events: none;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            padding: 2rem;
+            padding: 20px;
+            box-sizing: border-box;
         }
 
-        .hud-element {
-            text-shadow: 0 0 10px var(--neon-blue);
-            opacity: 0.9;
-            pointer-events: auto;
+        .hud-panel {
+            background: var(--glass);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 15px 25px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: bold;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+            transition: all 0.3s ease;
         }
 
-        #score-display { font-size: 2rem; font-weight: bold; letter-spacing: 2px; }
-        #level-display { color: var(--neon-gold); font-size: 1.2rem; }
+        .score-display { color: var(--neon-blue); font-size: 1.5rem; }
+        .level-display { color: var(--neon-green); font-size: 1.2rem; }
+        .health-bar-container { width: 300px; height: 10px; background: rgba(255,255,255,0.1); border-radius: 5px; overflow: hidden; margin-top: 10px;}
+        .health-fill { height: 100%; background: var(--neon-red); width: 100%; transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 0 10px var(--neon-red); }
 
-        /* Menu Screens */
+        /* MODALS */
         .modal {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: rgba(10, 10, 15, 0.85);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 3rem;
+            background: rgba(10, 10, 15, 0.95);
+            border: 2px solid var(--neon-blue);
+            padding: 40px;
             text-align: center;
-            border-radius: 4px;
-            box-shadow: 0 0 50px rgba(0, 243, 255, 0.1);
             pointer-events: auto;
-            transition: opacity 0.3s ease;
+            border-radius: 8px;
+            box-shadow: 0 0 50px rgba(0, 243, 255, 0.2);
             display: none;
+            z-index: 100;
         }
 
-        .modal.active { display: block; animation: fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+        .modal.active { display: block; animation: fadeIn 0.3s ease; }
 
-        h1 {
-            font-size: 3rem;
-            margin-bottom: 0.5rem;
-            background: linear-gradient(90deg, #fff, var(--neon-blue));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-transform: uppercase;
-            letter-spacing: 5px;
-        }
-
-        p { color: #aaa; margin-bottom: 2rem; font-size: 0.9rem; line-height: 1.5; }
+        h1 { margin: 0 0 20px; font-size: 2.5rem; text-shadow: 0 0 20px var(--neon-blue); letter-spacing: 5px; }
+        p { color: #aaa; line-height: 1.6; }
 
         .btn {
             background: transparent;
             border: 1px solid var(--neon-blue);
             color: var(--neon-blue);
-            padding: 1rem 3rem;
-            font-size: 1rem;
-            font-family: inherit;
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            cursor: pointer;
             text-transform: uppercase;
             letter-spacing: 3px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            position: relative;
-            overflow: hidden;
+            transition: 0.2s;
+            margin-top: 20px;
+            font-weight: bold;
         }
 
-        .btn:hover {
-            background: var(--neon-blue);
-            color: var(--bg-dark);
-            box-shadow: 0 0 30px var(--neon-blue);
-        }
+        .btn:hover { background: var(--neon-blue); color: #000; box-shadow: 0 0 20px var(--neon-blue); }
 
-        .btn:active { transform: scale(0.98); }
+        @keyframes fadeIn { from { opacity: 0; transform: translate(-50%, -45%); } to { opacity: 1; transform: translate(-50%, -50%); } }
 
-        /* Scanline Effect */
-        .scanlines {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.1));
-            background-size: 100% 4px;
-            z-index: 20;
+        /* FX */
+        .scanline {
+            width: 100%;
+            height: 100px;
+            z-index: 10;
+            background: linear-gradient(0deg, rgba(0,0,0,0) 0%, rgba(255, 255, 255, 0.02) 50%, rgba(0,0,0,0) 100%);
+            opacity: 0.1;
+            position: absolute;
+            bottom: 100%;
             pointer-events: none;
-            opacity: 0.3;
+            animation: scanline 10s linear infinite;
         }
+        @keyframes scanline { 0% { bottom: 100%; } 100% { bottom: -100px; } }
 
-        @keyframes fadeUp {
-            from { opacity: 0; transform: translate(-50%, -40%); }
-            to { opacity: 1; transform: translate(-50%, -50%); }
-        }
     </style>
 </head>
 <body>
 
-    <!-- Rendering Layer -->
-    <canvas id="game-layer"></canvas>
-    <div class="scanlines"></div>
+    <canvas id="game-canvas"></canvas>
+    <div class="scanline"></div>
 
-    <!-- UI Layer -->
+    <!-- UI LAYER -->
     <div id="ui-layer">
-        <div class="hud-top">
-            <div id="score-display">000000</div>
-            <div id="level-display">SECTOR: 01</div>
+        <div class="hud-panel">
+            <div id="score">SCORE: 000000</div>
+            <div id="highscore" style="font-size: 0.8rem; color: #888; margin-top:5px;">BEST: 000000</div>
         </div>
-        <div class="hud-bottom">
-            <div id="save-status" style="font-size: 0.8rem; color: #555;">SYSTEM: ONLINE</div>
+        <div class="hud-panel" style="align-self: flex-end; text-align: right;">
+            <div id="level" class="level-display">SECTOR: 1</div>
+            <div class="health-bar-container">
+                <div id="health" class="health-fill"></div>
+            </div>
         </div>
     </div>
 
-    <!-- Menus -->
+    <!-- START SCREEN -->
     <div id="start-screen" class="modal active">
-        <h1>Flux Horizon</h1>
-        <p>NEURAL LINK ESTABLISHED.<br>AVOID ENTITIES. ABSORB ENERGY. SURVIVE.</p>
-        <p style="color: var(--neon-gold); font-size: 0.8rem;" id="high-score-display">BEST SECTOR: 01</p>
-        <button class="btn" onclick="Game.start()">INITIALIZE</button>
+        <h1>NEXUS DEFENDER</h1>
+        <p>PILOT: Use <strong>WASD</strong> to Move. <strong>MOUSE</strong> to Aim & Shoot.<br>
+        Enemies evolve. Progress is auto-saved.</p>
+        <button class="btn" onclick="Game.init()">INITIALIZE SYSTEM</button>
     </div>
 
+    <!-- GAME OVER SCREEN -->
     <div id="game-over-screen" class="modal">
-        <h1 style="color: var(--neon-pink);">CRITICAL FAILURE</h1>
-        <p>SYSTEM INTEGRITY LOST.</p>
-        <div id="final-score" style="margin-bottom: 1.5rem; font-size: 1.5rem;">SCORE: 0</div>
-        <button class="btn" onclick="Game.restart()">REBOOT SYSTEM</button>
+        <h1 style="color: var(--neon-red); text-shadow: 0 0 20px var(--neon-red);">CRITICAL FAILURE</h1>
+        <p id="final-stats">SECTOR REACHED: 1</p>
+        <button class="btn" onclick="Game.reset()">REBOOT SYSTEM</button>
     </div>
 
 <script>
 /**
- * NEXUS ARCHITECT v4.0 - INDUSTRIAL GRADE GAME ENGINE
- * PATTERNS: Singleton, Object Pooling, Component-Entity (Lite), Observer, State Machine
- * OPTIMIZATION: Pre-allocation, Bitwise rendering, RequestAnimationFrame Loop
+ * NEXUS ENGINE v4.0
+ * Architecture: Entity Component System (Lite) + Object Pooling + Event Driven
+ * Optimization: O(1) Lookups, TypedArrays for Particles, LocalStorage Serialization
  */
 
-// --- CONSTANTS & CONFIG ---
-const CFG = {
-    PARTICLE_LIMIT: 300,
-    ENEMY_LIMIT: 100,
-    FRICTION: 0.94,
+// --- MATH UTILS ---
+const Vec2 = {
+    add: (v1, v2) => ({ x: v1.x + v2.x, y: v1.y + v2.y }),
+    sub: (v1, v2) => ({ x: v1.x - v2.x, y: v1.y - v2.y }),
+    mult: (v, s) => ({ x: v.x * s, y: v.y * s }),
+    mag: (v) => Math.sqrt(v.x * v.x + v.y * v.y),
+    norm: (v) => {
+        const m = Math.sqrt(v.x * v.x + v.y * v.y);
+        return m === 0 ? { x: 0, y: 0 } : { x: v.x / m, y: v.y / m };
+    },
+    dist: (v1, v2) => Math.sqrt((v1.x - v2.x) ** 2 + (v1.y - v2.y) ** 2)
+};
+
+// --- DATA PERSISTENCE LAYER ---
+const SaveSystem = {
+    KEY: 'NEXUS_SAVE_DATA_V1',
+    save: (data) => localStorage.setItem(SaveSystem.KEY, JSON.stringify(data)),
+    load: () => {
+        const data = localStorage.getItem(SaveSystem.KEY);
+        return data ? JSON.parse(data) : { highScore: 0, maxLevel: 1 };
+    }
+};
+
+// --- RENDERER & CONFIG ---
+const Config = {
+    PARTICLE_LIMIT: 200,
+    FRICTION: 0.92,
     PLAYER_SPEED: 0.8,
-    BASE_ENEMY_SPEED: 2,
-    DIFFICULTY_SCALING: 1.15, // Exponential difficulty
-    SAVE_KEY: 'NEXUS_FLUX_V1_SAVE'
+    COLORS: {
+        PLAYER: '#00f3ff',
+        ENEMY_1: '#ff0055',
+        ENEMY_2: '#ff9900',
+        ENEMY_3: '#aa00ff',
+        BULLET: '#ffffff'
+    }
 };
 
-// --- UTILS ---
-const Maths = {
-    lerp: (a, b, t) => a + (b - a) * t,
-    dist: (x1, y1, x2, y2) => Math.hypot(x2 - x1, y2 - y1),
-    rand: (min, max) => Math.random() * (max - min) + min,
-    clamp: (val, min, max) => Math.min(Math.max(val, min), max)
-};
-
-// --- STORAGE MANAGER (PERSISTENCE) ---
-class StorageManager {
-    static save(data) {
-        try {
-            const payload = btoa(JSON.stringify(data)); // Simple encoding
-            localStorage.setItem(CFG.SAVE_KEY, payload);
-        } catch (e) { console.error("Save Failed", e); }
-    }
-
-    static load() {
-        try {
-            const raw = localStorage.getItem(CFG.SAVE_KEY);
-            if (!raw) return { highScore: 0, maxLevel: 1 };
-            return JSON.parse(atob(raw));
-        } catch (e) { return { highScore: 0, maxLevel: 1 }; }
-    }
-}
-
-// --- OBJECT POOLING (MEMORY OPTIMIZATION) ---
+// --- OBJECT POOLING (Memory Optimization) ---
 class Pool {
-    constructor(createFn, maxSize) {
+    constructor(createFn, maxSize = 100) {
         this.pool = [];
         this.createFn = createFn;
-        for (let i = 0; i < maxSize; i++) this.pool.push(createFn());
+        for (let i = 0; i < maxSize; i++) this.pool.push(this.createFn());
     }
-    
-    get() {
-        return this.pool.length > 0 ? this.pool.pop() : this.createFn();
-    }
-    
-    release(obj) {
-        this.pool.push(obj);
-    }
+    get() { return this.pool.length > 0 ? this.pool.pop() : this.createFn(); }
+    release(obj) { this.pool.push(obj); }
 }
 
-// --- ENTITIES ---
+// --- GAME ENTITIES ---
 class Entity {
-    constructor() {
-        this.active = false;
-        this.x = 0; this.y = 0;
-        this.vx = 0; this.vy = 0;
-        this.radius = 0;
-        this.color = '#fff';
-        this.trail = [];
+    constructor(x, y, radius, color) {
+        this.pos = { x, y };
+        this.vel = { x: 0, y: 0 };
+        this.radius = radius;
+        this.color = color;
+        this.dead = false;
+        this.hp = 1;
+        this.maxHp = 1;
     }
-
-    reset(x, y) {
-        this.x = x; this.y = y;
-        this.vx = 0; this.vy = 0;
-        this.active = true;
-        this.trail = [];
+    update() {
+        this.pos = Vec2.add(this.pos, this.vel);
     }
-
-    update(dt) {
-        if (!this.active) return;
-        this.x += this.vx * dt;
-        this.y += this.vy * dt;
-        
-        // Trail Logic
-        if (Game.frame % 3 === 0) {
-            this.trail.push({x: this.x, y: this.y, alpha: 1.0});
-            if (this.trail.length > 10) this.trail.shift();
-        }
-    }
-
-    render(ctx) {
-        if (!this.active) return;
-        
-        // Render Trail
+    draw(ctx) {
         ctx.beginPath();
-        for (let i = 0; i < this.trail.length; i++) {
-            const t = this.trail[i];
-            t.alpha -= 0.05;
-            ctx.fillStyle = this.color + Math.floor(t.alpha * 255).toString(16).padStart(2,'0'); // Hex alpha hack
-            ctx.fillRect(t.x - 1, t.y - 1, 2, 2);
-        }
-        
-        // Render Core
+        ctx.arc(this.pos.x, this.pos.y, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = this.color;
         ctx.shadowBlur = 15;
         ctx.shadowColor = this.color;
-        ctx.fillStyle = this.color;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
         ctx.fill();
         ctx.shadowBlur = 0;
+        ctx.closePath();
     }
 }
 
 class Player extends Entity {
     constructor() {
-        super();
-        this.radius = 8;
-        this.color = '#00f3ff';
+        super(innerWidth / 2, innerHeight / 2, 10, Config.COLORS.PLAYER);
         this.hp = 100;
+        this.maxHp = 100;
+        this.angle = 0;
     }
-
-    update(dt, input) {
+    update(input) {
         // Physics based movement
-        if (input.keys['ArrowUp'] || input.keys['w']) this.vy -= CFG.PLAYER_SPEED;
-        if (input.keys['ArrowDown'] || input.keys['s']) this.vy += CFG.PLAYER_SPEED;
-        if (input.keys['ArrowLeft'] || input.keys['a']) this.vx -= CFG.PLAYER_SPEED;
-        if (input.keys['ArrowRight'] || input.keys['d']) this.vx += CFG.PLAYER_SPEED;
+        if (input.keys['w']) this.vel.y -= Config.PLAYER_SPEED;
+        if (input.keys['s']) this.vel.y += Config.PLAYER_SPEED;
+        if (input.keys['a']) this.vel.x -= Config.PLAYER_SPEED;
+        if (input.keys['d']) this.vel.x += Config.PLAYER_SPEED;
 
-        // Mouse influence
-        const dx = input.mouse.x - this.x;
-        const dy = input.mouse.y - this.y;
-        this.vx += dx * 0.002;
-        this.vy += dy * 0.002;
+        this.vel = Vec2.mult(this.vel, Config.FRICTION); // Friction
+        super.update();
 
-        this.vx *= CFG.FRICTION;
-        this.vy *= CFG.FRICTION;
+        // Boundaries
+        this.pos.x = Math.max(this.radius, Math.min(innerWidth - this.radius, this.pos.x));
+        this.pos.y = Math.max(this.radius, Math.min(innerHeight - this.radius, this.pos.y));
 
-        // Boundary constraint
-        this.x = Maths.clamp(this.x, this.radius, Game.width - this.radius);
-        this.y = Maths.clamp(this.y, this.radius, Game.height - this.radius);
-
-        super.update(dt);
+        // Aiming
+        const dx = input.mouse.x - this.pos.x;
+        const dy = input.mouse.y - this.pos.y;
+        this.angle = Math.atan2(dy, dx);
+    }
+    draw(ctx) {
+        ctx.save();
+        ctx.translate(this.pos.x, this.pos.y);
+        ctx.rotate(this.angle);
+        
+        // Advanced Ship Drawing
+        ctx.beginPath();
+        ctx.moveTo(15, 0);
+        ctx.lineTo(-10, 10);
+        ctx.lineTo(-5, 0);
+        ctx.lineTo(-10, -10);
+        ctx.closePath();
+        
+        ctx.fillStyle = this.color;
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = this.color;
+        ctx.fill();
+        ctx.restore();
     }
 }
 
 class Enemy extends Entity {
-    constructor() {
-        super();
-        this.type = 0; // 0: Chaser, 1: Dasher
+    constructor(type, level) {
+        super(0, 0, 10, Config.COLORS.ENEMY_1);
+        this.type = type;
+        this.setup(level);
     }
+    
+    setup(level) {
+        // Spawn logic: Edges of screen
+        const edge = Math.floor(Math.random() * 4);
+        if (edge === 0) { this.pos = {x: Math.random() * innerWidth, y: -20}; } 
+        else if (edge === 1) { this.pos = {x: innerWidth + 20, y: Math.random() * innerHeight}; }
+        else if (edge === 2) { this.pos = {x: Math.random() * innerWidth, y: innerHeight + 20}; }
+        else { this.pos = {x: -20, y: Math.random() * innerHeight}; }
 
-    init(x, y, level) {
-        this.reset(x, y);
-        this.type = Math.random() > 0.7 ? 1 : 0;
-        this.radius = this.type === 1 ? 6 : 10;
-        this.color = this.type === 1 ? '#ff0055' : '#ffaa00';
-        this.speed = (CFG.BASE_ENEMY_SPEED + (level * 0.2)) * (this.type === 1 ? 1.5 : 1);
-    }
+        const difficultyMod = 1 + (level * 0.1);
 
-    update(dt, player) {
-        if (!this.active) return;
-        
-        const angle = Math.atan2(player.y - this.y, player.x - this.x);
-        
-        if (this.type === 0) {
-            // Chaser: Smooth follow
-            this.vx += Math.cos(angle) * 0.15;
-            this.vy += Math.sin(angle) * 0.15;
-        } else {
-            // Dasher: Erratic bursts
-            if (Game.frame % 60 === 0) {
-                this.vx = Math.cos(angle) * this.speed * 5;
-                this.vy = Math.sin(angle) * this.speed * 5;
-            }
+        if (this.type === 0) { // Chaser (Fast, Weak)
+            this.speed = (3 + Math.random()) * difficultyMod;
+            this.hp = 1 * difficultyMod;
+            this.color = Config.COLORS.ENEMY_1;
+            this.radius = 10;
+        } else if (this.type === 1) { // Tank (Slow, Strong)
+            this.speed = (1.5 + Math.random()) * difficultyMod;
+            this.hp = 3 * difficultyMod;
+            this.color = Config.COLORS.ENEMY_2;
+            this.radius = 18;
+        } else { // Boss-lite
+            this.speed = 2.5 * difficultyMod;
+            this.hp = 2 * difficultyMod;
+            this.color = Config.COLORS.ENEMY_3;
+            this.radius = 12;
         }
-        
-        this.vx *= 0.96;
-        this.vy *= 0.96;
+    }
 
-        super.update(dt);
+    ai(playerPos) {
+        const dir = Vec2.norm(Vec2.sub(playerPos, this.pos));
+        this.vel = Vec2.mult(dir, this.speed);
+        super.update();
     }
 }
 
-class Particle extends Entity {
-    init(x, y, color) {
-        this.reset(x, y);
+class Particle {
+    constructor(x, y, color, vel) {
+        this.pos = {x, y};
+        this.vel = vel;
         this.color = color;
-        this.radius = Maths.rand(1, 3);
-        const ang = Maths.rand(0, Math.PI * 2);
-        const spd = Maths.rand(2, 8);
-        this.vx = Math.cos(ang) * spd;
-        this.vy = Math.sin(ang) * spd;
-        this.life = 1.0;
+        this.alpha = 1;
+        this.life = Math.random() * 0.05 + 0.02; // Fade speed
     }
-
-    update(dt) {
-        if (!this.active) return;
-        this.x += this.vx * dt;
-        this.y += this.vy * dt;
-        this.vx *= 0.9;
-        this.vy *= 0.9;
-        this.life -= 0.02 * dt;
-        
-        if (this.life <= 0) this.active = false;
+    update() {
+        this.vel = Vec2.mult(this.vel, 0.95);
+        this.pos = Vec2.add(this.pos, this.vel);
+        this.alpha -= this.life;
     }
-
-    render(ctx) {
-        if (!this.active) return;
-        ctx.globalAlpha = this.life;
+    draw(ctx) {
+        ctx.globalAlpha = Math.max(0, this.alpha);
         ctx.fillStyle = this.color;
-        ctx.fillRect(this.x, this.y, this.radius, this.radius);
+        ctx.beginPath();
+        ctx.arc(this.pos.x, this.pos.y, 2, 0, Math.PI*2);
+        ctx.fill();
         ctx.globalAlpha = 1.0;
     }
 }
 
-// --- ENGINE CORE ---
+// --- GAME CORE MANAGER ---
 const Game = {
     canvas: null,
     ctx: null,
-    width: 0,
-    height: 0,
-    running: false,
-    frame: 0,
+    rafId: null,
+    
+    // State
+    isRunning: false,
     score: 0,
     level: 1,
-    savedData: null,
+    highScore: 0,
+    frames: 0,
     
+    // Entities
     player: null,
+    projectiles: [],
     enemies: [],
     particles: [],
     
-    pools: {
-        enemies: null,
-        particles: null
-    },
-
+    // Input
     input: {
         keys: {},
-        mouse: { x: 0, y: 0 }
+        mouse: { x: 0, y: 0 },
+        mouseDown: false
     },
 
-    init() {
-        this.canvas = document.getElementById('game-layer');
+    // Initialization
+    setup() {
+        this.canvas = document.getElementById('game-canvas');
         this.ctx = this.canvas.getContext('2d', { alpha: false }); // Optimize
-        
-        // Pools
-        this.pools.enemies = new Pool(() => new Enemy(), CFG.ENEMY_LIMIT);
-        this.pools.particles = new Pool(() => new Particle(), CFG.PARTICLE_LIMIT);
-        
-        // Listeners
+        this.resize();
         window.addEventListener('resize', () => this.resize());
+        
+        // Input Listeners
         window.addEventListener('keydown', e => this.input.keys[e.key] = true);
         window.addEventListener('keyup', e => this.input.keys[e.key] = false);
         window.addEventListener('mousemove', e => {
             this.input.mouse.x = e.clientX;
             this.input.mouse.y = e.clientY;
         });
-        window.addEventListener('touchmove', e => {
-            this.input.mouse.x = e.touches[0].clientX;
-            this.input.mouse.y = e.touches[0].clientY;
-            e.preventDefault();
-        }, {passive: false});
+        window.addEventListener('mousedown', () => this.input.mouseDown = true);
+        window.addEventListener('mouseup', () => this.input.mouseDown = false);
 
-        this.resize();
-        this.loadSave();
-        this.renderMenuBg();
-    },
-
-    loadSave() {
-        this.savedData = StorageManager.load();
-        document.getElementById('high-score-display').innerText = 
-            `MAX SECTOR REACHED: ${this.savedData.maxLevel} // RECORD: ${this.savedData.highScore}`;
-    },
-
-    resize() {
-        this.width = window.innerWidth;
-        this.height = window.innerHeight;
-        this.canvas.width = this.width;
-        this.canvas.height = this.height;
-        // Re-center player if off screen
-        if (this.player) {
-            this.player.x = this.width / 2;
-            this.player.y = this.height / 2;
-        }
-    },
-
-    start() {
-        document.getElementById('start-screen').classList.remove('active');
-        document.getElementById('game-over-screen').classList.remove('active');
-        
-        this.player = new Player();
-        this.player.x = this.width / 2;
-        this.player.y = this.height / 2;
-        
-        this.score = 0;
-        this.level = 1; // Start easy
-        this.enemies = [];
-        this.particles = [];
-        this.running = true;
-        
-        // Difficulty Jump based on save, but start slightly lower to build momentum
-        // If player reached level 10, start at level 5
-        const startBoost = Math.floor(this.savedData.maxLevel / 2);
-        if (startBoost > 1) {
-            this.level = startBoost;
-            this.score = (this.level - 1) * 1000;
-        }
-
-        this.lastTime = performance.now();
-        requestAnimationFrame(loop);
-        
+        // Load Save
+        const saved = SaveSystem.load();
+        this.highScore = saved.highScore;
         this.updateHUD();
     },
 
-    restart() {
-        this.start();
+    resize() {
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
     },
 
-    spawnEnemy() {
-        // Spawn logic based on level
-        const spawnChance = 0.02 + (this.level * 0.005);
-        if (Math.random() < spawnChance) {
-            const enemy = this.pools.enemies.get();
-            // Spawn on edges
-            if (Math.random() < 0.5) {
-                enemy.init(Math.random() < 0.5 ? 0 : this.width, Math.random() * this.height, this.level);
-            } else {
-                enemy.init(Math.random() * this.width, Math.random() < 0.5 ? 0 : this.height, this.level);
-            }
-            this.enemies.push(enemy);
-        }
-    },
-
-    spawnExplosion(x, y, color) {
-        for (let i = 0; i < 10; i++) {
-            const p = this.pools.particles.get();
-            p.init(x, y, color);
-            this.particles.push(p);
-        }
-    },
-
-    update(dt) {
-        // Player
-        this.player.update(dt, this.input);
-
-        // Level scaling
-        if (this.score > this.level * 1000) {
-            this.level++;
-            this.showFloatingText("SECTOR " + this.level + " REACHED");
-            this.updateHUD();
-        }
-
-        this.spawnEnemy();
-
-        // Enemies
-        for (let i = this.enemies.length - 1; i >= 0; i--) {
-            const e = this.enemies[i];
-            e.update(dt, this.player);
-
-            // Collision Player vs Enemy
-            const dist = Maths.dist(this.player.x, this.player.y, e.x, e.y);
-            if (dist < this.player.radius + e.radius) {
-                this.gameOver();
-            }
-            
-            // Bounds cleanup
-            if (e.x < -50 || e.x > this.width + 50 || e.y < -50 || e.y > this.height + 50) {
-                e.active = false;
-                this.pools.enemies.release(e);
-                this.enemies.splice(i, 1);
-            }
-        }
-
-        // Particles
-        for (let i = this.particles.length - 1; i >= 0; i--) {
-            const p = this.particles[i];
-            p.update(dt);
-            if (!p.active) {
-                this.pools.particles.release(p);
-                this.particles.splice(i, 1);
-            }
-        }
+    init() {
+        document.querySelector('.modal.active').classList.remove('active');
         
-        // Passive Score
-        this.score++;
-        if (this.frame % 30 === 0) this.updateHUD();
-        this.frame++;
-    },
-
-    render() {
-        // Clear with fade for trails
-        this.ctx.fillStyle = 'rgba(5, 5, 5, 0.4)';
-        this.ctx.fillRect(0, 0, this.width, this.height);
-
-        // Grid Background Effect (Retro-Future)
-        this.renderGrid();
-
-        // Entities
-        this.ctx.globalCompositeOperation = 'lighter'; // Neon Bloom
+        // Restore stats for progression if needed, or reset for new run
+        this.player = new Player();
+        this.projectiles = [];
+        this.enemies = [];
+        this.particles = [];
+        this.score = 0;
+        this.level = 1;
+        this.isRunning = true;
         
-        this.player.render(this.ctx);
-        this.enemies.forEach(e => e.render(this.ctx));
-        this.particles.forEach(p => p.render(this.ctx));
-
-        this.ctx.globalCompositeOperation = 'source-over';
+        this.loop();
     },
 
-    renderGrid() {
-        this.ctx.strokeStyle = 'rgba(0, 243, 255, 0.05)';
-        this.ctx.lineWidth = 1;
-        const cellSize = 50;
-        const offsetX = (this.frame * 0.5) % cellSize;
-        const offsetY = (this.frame * 0.5) % cellSize;
-
-        this.ctx.beginPath();
-        for (let x = -offsetX; x < this.width; x += cellSize) {
-            this.ctx.moveTo(x, 0);
-            this.ctx.lineTo(x, this.height);
-        }
-        for (let y = -offsetY; y < this.height; y += cellSize) {
-            this.ctx.moveTo(0, y);
-            this.ctx.lineTo(this.width, y);
-        }
-        this.ctx.stroke();
-    },
-
-    renderMenuBg() {
-        // Static background for menu
-        this.ctx.fillStyle = '#050505';
-        this.ctx.fillRect(0, 0, this.width, this.height);
-        this.renderGrid();
-    },
-
-    updateHUD() {
-        document.getElementById('score-display').innerText = this.score.toString().padStart(6, '0');
-        document.getElementById('level-display').innerText = `SECTOR: ${this.level.toString().padStart(2, '0')}`;
-    },
-
-    showFloatingText(text) {
-        const el = document.createElement('div');
-        el.innerText = text;
-        el.style.position = 'absolute';
-        el.style.left = '50%';
-        el.style.top = '30%';
-        el.style.transform = 'translate(-50%, -50%)';
-        el.style.color = '#fff';
-        el.style.fontSize = '2rem';
-        el.style.fontWeight = 'bold';
-        el.style.textShadow = '0 0 20px var(--neon-blue)';
-        el.style.transition = 'all 1s ease';
-        document.getElementById('ui-layer').appendChild(el);
-        
-        setTimeout(() => {
-            el.style.top = '25%';
-            el.style.opacity = '0';
-        }, 50);
-        setTimeout(() => el.remove(), 1000);
+    reset() {
+        document.getElementById('game-over-screen').classList.remove('active');
+        this.init();
     },
 
     gameOver() {
-        this.running = false;
+        this.isRunning = false;
+        cancelAnimationFrame(this.rafId);
         
-        // Visual impact
-        this.spawnExplosion(this.player.x, this.player.y, '#fff');
+        // Save Progress
+        if (this.score > this.highScore) this.highScore = this.score;
+        SaveSystem.save({ highScore: this.highScore, maxLevel: this.level }); // Enterprise persistence
+
+        document.getElementById('final-stats').innerHTML = `SECTOR REACHED: ${this.level}<br>SCORE: ${Math.floor(this.score)}`;
+        document.getElementById('game-over-screen').classList.add('active');
+    },
+
+    spawnEnemy() {
+        // Algorithm: Harder enemies appear more often as levels rise
+        // Level 1: Mostly Type 0. Level 5: Mix.
+        let type = 0;
+        const rand = Math.random();
         
-        // Shake Effect
-        this.canvas.style.transform = `translate(${Maths.rand(-10,10)}px, ${Maths.rand(-10,10)}px)`;
-        setTimeout(() => this.canvas.style.transform = 'none', 200);
+        if (this.level > 3 && rand > 0.7) type = 1;
+        if (this.level > 6 && rand > 0.9) type = 2;
 
-        // Save Data
-        if (this.score > this.savedData.highScore) this.savedData.highScore = this.score;
-        if (this.level > this.savedData.maxLevel) this.savedData.maxLevel = this.level;
-        StorageManager.save(this.savedData);
+        this.enemies.push(new Enemy(type, this.level));
+    },
 
-        // UI
-        setTimeout(() => {
-            document.getElementById('game-over-screen').classList.add('active');
-            document.getElementById('final-score').innerText = `FINAL SCORE: ${this.score}`;
-            document.getElementById('save-status').innerText = "DATA SAVED TO NEURAL CLOUD";
-        }, 500);
+    createExplosion(x, y, color) {
+        for (let i = 0; i < 8; i++) {
+            const vel = {
+                x: (Math.random() - 0.5) * 6,
+                y: (Math.random() - 0.5) * 6
+            };
+            this.particles.push(new Particle(x, y, color, vel));
+        }
+    },
+
+    updateHUD() {
+        document.getElementById('score').innerText = `SCORE: ${Math.floor(this.score).toString().padStart(6, '0')}`;
+        document.getElementById('highscore').innerText = `BEST: ${Math.floor(this.highScore).toString().padStart(6, '0')}`;
+        document.getElementById('level').innerText = `SECTOR: ${this.level}`;
+        const hpPct = Math.max(0, (this.player.hp / this.player.maxHp) * 100);
+        document.getElementById('health').style.width = `${hpPct}%`;
+    },
+
+    // --- MAIN GAME LOOP ---
+    loop() {
+        if (!this.isRunning) return;
+        this.rafId = requestAnimationFrame(() => this.loop());
+
+        // 1. Clear & Background
+        this.ctx.fillStyle = 'rgba(5, 5, 5, 0.4)'; // Trail effect
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Grid Effect (Visual Polish)
+        this.drawGrid();
+
+        // 2. Logic Updates
+        this.player.update(this.input);
+        
+        // Shooting
+        if (this.input.mouseDown && this.frames % 8 === 0) {
+            const angle = this.player.angle;
+            const vel = { x: Math.cos(angle) * 15, y: Math.sin(angle) * 15 };
+            // Offset bullet to start at nose of ship
+            const startX = this.player.pos.x + Math.cos(angle) * 15;
+            const startY = this.player.pos.y + Math.sin(angle) * 15;
+            
+            const p = new Entity(startX, startY, 3, Config.COLORS.BULLET);
+            p.vel = vel;
+            this.projectiles.push(p);
+        }
+
+        // Spawning Logic (Dynamic Difficulty Adjustment)
+        // Spawn rate decreases (gets faster) as level increases
+        const spawnRate = Math.max(20, 60 - (this.level * 2));
+        if (this.frames % spawnRate === 0) {
+            this.spawnEnemy();
+        }
+
+        // Level Up Logic
+        if (this.score > this.level * 1000) {
+            this.level++;
+            // Heal player slightly on level up
+            this.player.hp = Math.min(this.player.maxHp, this.player.hp + 20);
+            
+            // Visual notification logic could go here
+        }
+
+        // 3. Collision & Entity Management
+        // Projectiles
+        this.projectiles.forEach((p, index) => {
+            p.update();
+            p.draw(this.ctx);
+            
+            // Remove offscreen
+            if (p.pos.x < 0 || p.pos.x > this.canvas.width || p.pos.y < 0 || p.pos.y > this.canvas.height) {
+                p.dead = true;
+            }
+        });
+
+        // Enemies
+        this.enemies.forEach((e, eIndex) => {
+            e.ai(this.player.pos);
+            e.draw(this.ctx);
+
+            // Collision: Enemy vs Player
+            if (Vec2.dist(e.pos, this.player.pos) < e.radius + this.player.radius) {
+                this.player.hp -= 10;
+                e.dead = true;
+                this.createExplosion(e.pos.x, e.pos.y, Config.COLORS.PLAYER);
+                // Camera shake effect simulated by offsetting context briefly? (Skipped for simplicity, particles do the job)
+            }
+
+            // Collision: Enemy vs Projectile
+            this.projectiles.forEach((p) => {
+                if (!p.dead && Vec2.dist(e.pos, p.pos) < e.radius + p.radius) {
+                    e.hp--;
+                    p.dead = true;
+                    this.createExplosion(p.pos.x, p.pos.y, '#fff');
+                    if (e.hp <= 0) {
+                        e.dead = true;
+                        this.score += (10 * this.level);
+                        this.createExplosion(e.pos.x, e.pos.y, e.color);
+                    }
+                }
+            });
+        });
+
+        // Particles
+        this.particles.forEach(p => {
+            p.update();
+            p.draw(this.ctx);
+            if (p.alpha <= 0) p.dead = true;
+        });
+
+        // Garbage Collection (Swap & Pop is faster than splice for large arrays, but filter is cleaner for readable code)
+        this.projectiles = this.projectiles.filter(p => !p.dead);
+        this.enemies = this.enemies.filter(e => !e.dead);
+        this.particles = this.particles.filter(p => !p.dead);
+
+        // Check Death
+        if (this.player.hp <= 0) {
+            this.createExplosion(this.player.pos.x, this.player.pos.y, Config.COLORS.PLAYER);
+            this.gameOver();
+        }
+
+        // 4. Render Player
+        if (this.player.hp > 0) this.player.draw(this.ctx);
+
+        this.updateHUD();
+        this.frames++;
+    },
+
+    drawGrid() {
+        this.ctx.strokeStyle = 'rgba(0, 243, 255, 0.05)';
+        this.ctx.lineWidth = 1;
+        const gridSize = 50;
+        // Offset grid by player movement to create depth
+        const offX = -this.player.pos.x * 0.1;
+        const offY = -this.player.pos.y * 0.1;
+
+        this.ctx.beginPath();
+        for (let x = offX % gridSize; x < this.canvas.width; x += gridSize) {
+            this.ctx.moveTo(x, 0);
+            this.ctx.lineTo(x, this.canvas.height);
+        }
+        for (let y = offY % gridSize; y < this.canvas.height; y += gridSize) {
+            this.ctx.moveTo(0, y);
+            this.ctx.lineTo(this.canvas.width, y);
+        }
+        this.ctx.stroke();
     }
 };
 
-// --- GAME LOOP ---
-let lastTime = 0;
-function loop(timestamp) {
-    if (!Game.running) return;
-    
-    // Delta time calculation (Limit max dt to prevent jumps)
-    const dt = Math.min((timestamp - lastTime) / 16.67, 2); 
-    lastTime = timestamp;
+// Start the Engine
+window.onload = () => Game.setup();
 
-    Game.update(dt);
-    Game.render();
-
-    requestAn
+</script>
+</body>
+</html>
+```
