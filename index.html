@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NEON VORTEX: FINAL</title>
+    <title>NEON VORTEX: WORLD RANK</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
         :root { --primary: #00f3ff; --secondary: #ff0055; --bg: #050505; --ui-font: 'Orbitron', sans-serif; --gold: #ffd700; }
         * { box-sizing: border-box; user-select: none; touch-action: none; }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: var(--bg); font-family: var(--ui-font); color: white; }
         canvas { display: block; position: absolute; top: 0; left: 0; }
-        .overlay { position: absolute; width: 100%; height: 100%; background: rgba(5,5,5,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; text-align: center; padding: 20px; }
+        .overlay { position: absolute; width: 100%; height: 100%; background: rgba(5,5,5,0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; text-align: center; padding: 20px; }
         .hidden { display: none !important; }
-        h1 { font-size: 2.2rem; background: linear-gradient(to right, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 20px; text-transform: uppercase; }
+        h1 { font-size: 2.2rem; background: linear-gradient(to right, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 20px; }
         button { margin: 10px; padding: 15px 30px; font-family: var(--ui-font); font-weight: 900; background: var(--primary); border: none; cursor: pointer; clip-path: polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%); color: #000; }
         #leaderboard { margin-top: 20px; border: 1px solid var(--primary); padding: 15px; width: 280px; background: rgba(0, 243, 255, 0.05); }
         .score-row { display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding: 5px 0; font-size: 0.9rem; }
@@ -25,10 +25,7 @@
 
 <canvas id="gameCanvas"></canvas>
 
-<div id="win-popup" class="hidden">
-    <div class="trophy-icon">🏆</div>
-    <div style="color:var(--gold); font-weight:900; font-size:1.5rem;">NOUVEAU RECORD !</div>
-</div>
+<div id="win-popup" class="hidden"><div class="trophy-icon">🏆</div><div style="color:var(--gold); font-weight:900;">RECORD !</div></div>
 
 <div id="authScreen" class="overlay">
     <h1>NEON VORTEX</h1>
@@ -37,7 +34,7 @@
 
 <div id="pseudoScreen" class="overlay hidden">
     <h1>NOM DE CODE</h1>
-    <input type="text" id="pseudoInput" placeholder="Ton Pseudo..." maxlength="12">
+    <input type="text" id="pseudoInput" placeholder="Pseudo..." maxlength="12">
     <button id="savePseudoBtn">CONFIRMER</button>
 </div>
 
@@ -46,16 +43,15 @@
     <button id="startBtn">DÉMARRER</button>
     <div id="leaderboard">
         <div style="color:var(--primary); margin-bottom:10px; font-weight:bold;">TOP 5 MONDIAL</div>
-        <div id="leaderboardList">Chargement...</div>
+        <div id="leaderboardList">En attente de Firestore...</div>
     </div>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getAuth, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getAuth, signInWithRedirect, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
     import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, limit, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    // Config basée sur ton projet
     const firebaseConfig = {
         apiKey: "AIzaSyBBvuAx9E3M-zwGDrhZZkc",
         authDomain: "neon-vortex-d3d36.firebaseapp.com",
@@ -69,23 +65,27 @@
     const auth = getAuth();
     const db = getFirestore();
     const provider = new GoogleAuthProvider();
-    let userProfile = null;
+    let userProfile = { score: 0 };
     let hasShownTrophy = false;
 
-    // --- CONNEXION REDIRECT ---
+    // --- AUTH ---
     document.getElementById('loginBtn').onclick = () => signInWithRedirect(auth, provider);
 
     onAuthStateChanged(auth, async (user) => {
         if (user) {
-            const userDoc = await getDoc(doc(db, "players", user.uid));
-            if (!userDoc.exists()) {
-                document.getElementById('authScreen').classList.add('hidden');
-                document.getElementById('pseudoScreen').classList.remove('hidden');
-                userProfile = { uid: user.uid };
-            } else {
-                userProfile = { ...userDoc.data(), uid: user.uid };
-                document.getElementById('authScreen').classList.add('hidden');
-                showMenu();
+            document.getElementById('authScreen').classList.add('hidden');
+            try {
+                const userDoc = await getDoc(doc(db, "players", user.uid));
+                if (!userDoc.exists()) {
+                    document.getElementById('pseudoScreen').classList.remove('hidden');
+                    userProfile.uid = user.uid;
+                } else {
+                    userProfile = { ...userDoc.data(), uid: user.uid };
+                    showMenu();
+                }
+            } catch(e) { 
+                alert("Firestore n'est pas encore activé dans ta console !");
+                showMenu(); // Permet de jouer même sans DB
             }
         }
     });
@@ -93,9 +93,8 @@
     document.getElementById('savePseudoBtn').onclick = async () => {
         const name = document.getElementById('pseudoInput').value.trim();
         if(name.length >= 3) {
-            const data = { pseudo: name, score: 0 };
-            await setDoc(doc(db, "players", userProfile.uid), data);
-            userProfile = { ...data, uid: userProfile.uid };
+            userProfile.pseudo = name;
+            try { await setDoc(doc(db, "players", userProfile.uid), { pseudo: name, score: 0 }); } catch(e){}
             document.getElementById('pseudoScreen').classList.add('hidden');
             showMenu();
         }
@@ -103,30 +102,31 @@
 
     function showMenu() {
         document.getElementById('menuScreen').classList.remove('hidden');
-        document.getElementById('welcomeTxt').innerText = "AGENT: " + userProfile.pseudo;
+        document.getElementById('welcomeTxt').innerText = userProfile.pseudo || "AGENT";
         loadScores();
     }
 
     function loadScores() {
-        const q = query(collection(db, "players"), orderBy("score", "desc"), limit(5));
-        onSnapshot(q, (snap) => {
-            const list = document.getElementById('leaderboardList');
-            list.innerHTML = "";
-            snap.forEach(d => {
-                const p = d.data();
-                list.innerHTML += `<div class="score-row"><span>${p.pseudo}</span><span>${Math.floor(p.score)}</span></div>`;
+        try {
+            const q = query(collection(db, "players"), orderBy("score", "desc"), limit(5));
+            onSnapshot(q, (snap) => {
+                const list = document.getElementById('leaderboardList');
+                list.innerHTML = "";
+                snap.forEach(d => {
+                    const p = d.data();
+                    list.innerHTML += `<div class="score-row"><span>${p.pseudo}</span><span>${Math.floor(p.score)}</span></div>`;
+                });
             });
-        });
+        } catch(e) { document.getElementById('leaderboardList').innerText = "Mode Hors-ligne"; }
     }
 
-    // --- JEU ---
+    // --- LOGIQUE JEU ---
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     let enemies = [], player = { x: 0, y: 0, tx: 0, ty: 0 }, gameScore = 0, state = 'WAITING';
 
     function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
     window.addEventListener('resize', resize); resize();
-
     const getPos = (e) => { const t = e.touches ? e.touches[0] : e; player.tx = t.clientX; player.ty = t.clientY; };
     window.addEventListener('mousemove', getPos); window.addEventListener('touchstart', getPos); window.addEventListener('touchmove', getPos);
 
@@ -139,65 +139,46 @@
     function update(dt) {
         if(state !== 'PLAYING') return;
         gameScore += dt * 30;
-
         if(gameScore > userProfile.score && !hasShownTrophy && userProfile.score > 0) {
             hasShownTrophy = true;
             document.getElementById('win-popup').classList.remove('hidden');
-            setTimeout(() => document.getElementById('win-popup').classList.add('hidden'), 2500);
+            setTimeout(() => document.getElementById('win-popup').classList.add('hidden'), 2000);
         }
-
-        if(Math.random() < 0.045) {
-            const side = Math.floor(Math.random() * 4);
+        if(Math.random() < 0.04) {
+            const side = Math.floor(Math.random()*4);
             let ex, ey;
-            if(side === 0) { ex = Math.random()*canvas.width; ey = -20; }
-            else if(side === 1) { ex = canvas.width+20; ey = Math.random()*canvas.height; }
-            else if(side === 2) { ex = Math.random()*canvas.width; ey = canvas.height+20; }
-            else { ex = -20; ey = Math.random()*canvas.height; }
-            const angle = Math.atan2(player.y - ey, player.x - ex);
-            enemies.push({ x: ex, y: ey, vx: Math.cos(angle), vy: Math.sin(angle), s: 250 + (gameScore/8) });
+            if(side===0){ex=Math.random()*canvas.width; ey=-20;}
+            else if(side===1){ex=canvas.width+20; ey=Math.random()*canvas.height;}
+            else if(side===2){ex=Math.random()*canvas.width; ey=canvas.height+20;}
+            else {ex=-20; ey=Math.random()*canvas.height;}
+            const a = Math.atan2(player.y-ey, player.x-ex);
+            enemies.push({x:ex, y:ey, vx:Math.cos(a), vy:Math.sin(a), s:240+(gameScore/10)});
         }
-
-        player.x += (player.tx - player.x) * 0.15;
-        player.y += (player.ty - player.y) * 0.15;
-
-        for(let i = enemies.length - 1; i >= 0; i--) {
-            let e = enemies[i];
-            e.x += e.vx * e.s * dt; e.y += e.vy * e.s * dt;
-            if(Math.sqrt((player.x-e.x)**2 + (player.y-e.y)**2) < 20) {
-                state = 'GAMEOVER';
-                saveScore();
-            }
-            if(e.x < -50 || e.x > canvas.width+50 || e.y < -50 || e.y > canvas.height+50) enemies.splice(i, 1);
+        player.x += (player.tx-player.x)*0.15; player.y += (player.ty-player.y)*0.15;
+        for(let i=enemies.length-1; i>=0; i--){
+            let e = enemies[i]; e.x += e.vx*e.s*dt; e.y += e.vy*e.s*dt;
+            if(Math.sqrt((player.x-e.x)**2+(player.y-e.y)**2)<20){ state='GAMEOVER'; saveFinal(); }
+            if(e.x<-50||e.x>canvas.width+50||e.y<-50||e.y>canvas.height+50) enemies.splice(i,1);
         }
     }
 
-    async function saveScore() {
-        if(gameScore > userProfile.score) {
-            await updateDoc(doc(db, "players", userProfile.uid), { score: gameScore });
+    async function saveFinal() {
+        if(gameScore > userProfile.score && userProfile.uid) {
             userProfile.score = gameScore;
+            try { await updateDoc(doc(db, "players", userProfile.uid), { score: gameScore }); } catch(e){}
         }
         document.getElementById('menuScreen').classList.remove('hidden');
     }
 
     function draw() {
-        ctx.fillStyle = 'black'; ctx.fillRect(0,0,canvas.width,canvas.height);
-        enemies.forEach(e => {
-            ctx.fillStyle = '#ff0055'; ctx.shadowBlur = 10; ctx.shadowColor = '#ff0055';
-            ctx.fillRect(e.x-10, e.y-10, 20, 20);
-        });
-        ctx.shadowBlur = 15; ctx.shadowColor = '#00f3ff'; ctx.fillStyle = "white";
-        ctx.beginPath(); ctx.arc(player.x, player.y, 12, 0, Math.PI*2); ctx.fill();
-        if(state === 'PLAYING') {
-            ctx.shadowBlur = 0; ctx.fillStyle = "white"; ctx.font = "bold 20px Orbitron";
-            ctx.fillText("SCORE: " + Math.floor(gameScore), 20, 40);
-        }
+        ctx.fillStyle='black'; ctx.fillRect(0,0,canvas.width,canvas.height);
+        enemies.forEach(e=>{ ctx.fillStyle='#ff0055'; ctx.fillRect(e.x-10,e.y-10,20,20); });
+        ctx.fillStyle="white"; ctx.beginPath(); ctx.arc(player.x,player.y,12,0,Math.PI*2); ctx.fill();
+        if(state==='PLAYING'){ ctx.font="20px Orbitron"; ctx.fillText("SCORE: "+Math.floor(gameScore),20,40); }
     }
 
-    let lastT = 0;
-    function loop(t) {
-        const dt = (t - lastT) / 1000; lastT = t;
-        update(dt || 0); draw(); requestAnimationFrame(loop);
-    }
+    let lastT=0;
+    function loop(t){ const dt=(t-lastT)/1000; lastT=t; update(dt||0); draw(); requestAnimationFrame(loop); }
     requestAnimationFrame(loop);
 </script>
 </body>
