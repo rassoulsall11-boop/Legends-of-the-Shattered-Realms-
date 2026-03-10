@@ -97,7 +97,7 @@ canvas{display:block;position:absolute;top:0;left:0;width:100%;height:100%;}
 .btn:hover,.btn:active{background:var(--cy);color:#000;box-shadow:0 0 16px var(--cy);}
 .btnr{border-color:rgba(255,0,85,.5);}
 .btnr:hover,.btnr:active{background:var(--re)!important;box-shadow:0 0 16px var(--re)!important;color:#fff!important;}
-#bhud{position:absolute;bottom:64px;left:0;width:100%;padding:clamp(8px,2vw,12px) clamp(10px,2.5vw,14px);display:flex;justify-content:space-between;align-items:flex-end;z-index:100;pointer-events:none;}
+#bhud{position:absolute;bottom:0;left:0;width:100%;padding:clamp(8px,2vw,12px) clamp(10px,2.5vw,14px);display:flex;justify-content:space-between;align-items:flex-end;z-index:100;pointer-events:none;}
 .bw{display:flex;flex-direction:column;gap:4px;}
 .bwr{align-items:flex-end;}
 .bl{font-size:var(--ui-xs);color:rgba(255,255,255,.35);letter-spacing:.1em;}
@@ -238,80 +238,7 @@ canvas{display:block;position:absolute;top:0;left:0;width:100%;height:100%;}
 ::-webkit-scrollbar{width:3px;}
 ::-webkit-scrollbar-track{background:transparent;}
 ::-webkit-scrollbar-thumb{background:rgba(255,200,0,.18);border-radius:2px;}
-/* ══ PUBLICITÉS ══ */
-/* Bannière du bas — toujours visible pendant le jeu */
-#ad-banner{
-  position:fixed;bottom:0;left:0;right:0;z-index:50;
-  display:flex;align-items:center;justify-content:center;
-  background:rgba(2,4,8,.92);
-  border-top:1px solid rgba(255,255,255,.06);
-  height:60px;
-  pointer-events:auto;
-}
-#ad-banner-inner{
-  width:min(728px,100%);height:60px;
-  display:flex;align-items:center;justify-content:center;
-  position:relative;
-}
-/* Label discret "Publicité" */
-#ad-banner-inner::before{
-  content:'PUBLICITÉ';
-  position:absolute;top:2px;left:6px;
-  font-size:.32rem;letter-spacing:.18em;
-  color:rgba(255,255,255,.18);font-family:var(--f);
-}
-/* Zone réservée AdSense — remplace le placeholder par ton code */
-.ad-slot-banner{
-  width:728px;max-width:100%;height:60px;
-  display:flex;align-items:center;justify-content:center;
-  background:rgba(255,255,255,.03);
-  border:1px dashed rgba(255,255,255,.08);
-  border-radius:4px;
-  color:rgba(255,255,255,.15);
-  font-size:.38rem;letter-spacing:.2em;font-family:var(--f);
-}
-
-/* Écran interstitiel pub — affiché après Game Over avant Rejouer */
-#ad-interstitial{
-  position:fixed;inset:0;z-index:9000;
-  background:rgba(2,4,8,.97);backdrop-filter:blur(20px);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:16px;
-  opacity:0;pointer-events:none;
-  transition:opacity .4s;
-}
-#ad-interstitial.show{opacity:1;pointer-events:auto;}
-#ad-inter-header{
-  display:flex;align-items:center;justify-content:space-between;
-  width:min(640px,92vw);
-}
-#ad-inter-label{font-size:.38rem;letter-spacing:.22em;color:rgba(255,255,255,.22);font-family:var(--f);}
-#ad-inter-skip{
-  font-size:.44rem;letter-spacing:.12em;color:rgba(255,255,255,.3);
-  font-family:var(--f);padding:4px 10px;border-radius:6px;
-  border:1px solid rgba(255,255,255,.1);background:transparent;cursor:default;
-}
-#ad-inter-skip.ready{
-  color:var(--cy);border-color:rgba(0,243,255,.4);cursor:pointer;
-  background:rgba(0,243,255,.07);transition:.2s;
-}
-#ad-inter-skip.ready:hover{background:var(--cy);color:#000;}
-/* Zone réservée AdSense interstitiel */
-.ad-slot-inter{
-  width:min(640px,92vw);height:min(360px,50vw);
-  display:flex;align-items:center;justify-content:center;
-  background:rgba(255,255,255,.03);
-  border:1px dashed rgba(255,255,255,.08);
-  border-radius:10px;
-  color:rgba(255,255,255,.13);
-  font-size:.45rem;letter-spacing:.18em;font-family:var(--f);
-  text-align:center;line-height:2;
-}
-#ad-inter-countdown{
-  font-size:.52rem;color:rgba(255,255,255,.25);letter-spacing:.15em;font-family:var(--f);
-}
-#ad-inter-countdown span{color:var(--cy);}
-
+/* ══ ÉVÉNEMENTS NARRATIFS ══ */
 #ev-bg{position:absolute;inset:0;z-index:170;opacity:0;transition:opacity 1s;pointer-events:none;}
 #ev-pause-screen{position:absolute;top:54px;left:50%;transform:translateX(-50%);z-index:195;display:flex;flex-direction:column;align-items:center;opacity:0;pointer-events:none;transition:opacity .35s,transform .35s;transform:translateX(-50%) translateY(-12px);width:min(460px,90vw);}
 #ev-pause-screen.ev-show{opacity:1;pointer-events:none;transform:translateX(-50%) translateY(0);}
@@ -514,34 +441,9 @@ canvas{display:block;position:absolute;top:0;left:0;width:100%;height:100%;}
     <div style="font-size:.6rem;color:rgba(255,255,255,.34);margin-top:4px;" id="fdt"></div>
     <div style="font-size:.72rem;color:var(--ye);margin-top:8px;font-weight:700;" id="fcoin"></div>
   </div>
-  <div class="mbtns" style="width:190px;"><button class="mb" id="replay-btn">▶ REJOUER</button></div>
+  <div class="mbtns" style="width:190px;"><button class="mb" onclick="location.reload()">▶ REJOUER</button></div>
 </div>
 <canvas id="canvas"></canvas>
-
-<!-- ══ BANNIÈRE PUB EN BAS ══ -->
-<div id="ad-banner">
-  <div id="ad-banner-inner">
-    <!-- ▼▼▼ COLLE TON CODE ADSENSE ICI (remplace la div .ad-slot-banner) ▼▼▼ -->
-    <div class="ad-slot-banner">
-      EMPLACEMENT PUBLICITAIRE · 728×60 · ADSENSE
-    </div>
-    <!-- ▲▲▲ FIN ADSENSE ▲▲▲ -->
-  </div>
-</div>
-
-<!-- ══ INTERSTITIEL PUB (affiché avant Rejouer) ══ -->
-<div id="ad-interstitial">
-  <div id="ad-inter-header">
-    <div id="ad-inter-label">PUBLICITÉ</div>
-    <button id="ad-inter-skip">Passer dans <span id="ad-skip-num">5</span>s</button>
-  </div>
-  <!-- ▼▼▼ COLLE TON CODE ADSENSE INTERSTITIEL ICI ▼▼▼ -->
-  <div class="ad-slot-inter">
-    EMPLACEMENT PUBLICITAIRE · 640×360<br>ADSENSE / RÉSEAU PUB
-  </div>
-  <!-- ▲▲▲ FIN ADSENSE ▲▲▲ -->
-  <div id="ad-inter-countdown">La partie reprend dans <span id="ad-skip-num2">5</span> secondes...</div>
-</div>
 <script>
 const canvas=document.getElementById('canvas');
 const ctx=canvas.getContext('2d');
@@ -1025,55 +927,6 @@ function drawPlayer(){
   if(charge>0){const pulse=Math.sin(now*.018)*2;ctx.save();ctx.strokeStyle=`rgba(191,0,255,${charge*.3})`;ctx.lineWidth=6;ctx.beginPath();ctx.arc(p.x,p.y,34+pulse,0,Math.PI*2);ctx.stroke();ctx.strokeStyle=`rgba(191,0,255,${.5+charge*.5})`;ctx.lineWidth=3;ctx.shadowBlur=16;ctx.shadowColor='#bf00ff';ctx.beginPath();ctx.arc(p.x,p.y,34+pulse,-Math.PI/2,-Math.PI/2+charge*Math.PI*2);ctx.stroke();if(charge>0.7){for(let i=0;i<4;i++){const a=now*.004+i*(Math.PI/2);const pr=38+pulse;ctx.fillStyle=`rgba(191,0,255,${(charge-.7)*3.3})`;ctx.shadowBlur=8;ctx.shadowColor='#bf00ff';ctx.beginPath();ctx.arc(p.x+Math.cos(a)*pr,p.y+Math.sin(a)*pr,2.5,0,Math.PI*2);ctx.fill();}}ctx.restore();}
   ctx.globalAlpha=alpha;const sk=SKINS.find(s=>s.id===G.skin)||SKINS[0];sk.fn(ctx,p.x,p.y,12,now);ctx.globalAlpha=1;ctx.shadowBlur=0;
 }
-/* ══ GESTION PUBLICITÉS ══ */
-const ADS = {
-  INTERSTITIAL_DURATION: 5, // secondes avant de pouvoir passer
-  _timer: null,
-  _count: 0,
-
-  // Affiche l'interstitiel, puis appelle onDone() quand le joueur passe
-  showInterstitial(onDone) {
-    const overlay = document.getElementById('ad-interstitial');
-    const skipBtn = document.getElementById('ad-inter-skip');
-    const num1    = document.getElementById('ad-skip-num');
-    const num2    = document.getElementById('ad-skip-num2');
-
-    this._count = this.INTERSTITIAL_DURATION;
-    num1.textContent = this._count;
-    num2.textContent = this._count;
-    skipBtn.className = 'ad-inter-skip'; // reset — pas encore cliquable
-    skipBtn.textContent = `Passer dans ${this._count}s`;
-
-    overlay.classList.add('show');
-
-    // Compte à rebours
-    if (this._timer) clearInterval(this._timer);
-    this._timer = setInterval(() => {
-      this._count--;
-      num1.textContent = this._count;
-      num2.textContent = this._count;
-      if (this._count <= 0) {
-        clearInterval(this._timer);
-        skipBtn.className = 'ad-inter-skip ready';
-        skipBtn.textContent = '✕  Fermer';
-        skipBtn.onclick = () => {
-          overlay.classList.remove('show');
-          skipBtn.onclick = null;
-          onDone();
-        };
-        document.getElementById('ad-inter-countdown').style.display = 'none';
-      } else {
-        skipBtn.textContent = `Passer dans ${this._count}s`;
-      }
-    }, 1000);
-  },
-};
-
-// Bouton Rejouer — affiche la pub puis recharge
-document.getElementById('replay-btn').onclick = () => {
-  ADS.showInterstitial(() => location.reload());
-};
-
 init();
 </script>
 </body>
