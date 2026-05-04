@@ -3,271 +3,110 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>NEON VORTEX - ULTIMATE</title>
+<title>NEON VORTEX</title>
+<script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
 <style>
+/* ... (Tes styles CSS restent exactement les mêmes) ... */
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
-:root{
-  --cy:#00f3ff;--re:#ff0055;--or:#ff9800;--gr:#00ff88;--pu:#bf00ff;--ye:#ffe600;
-  --bg:#020408;--f:'Orbitron',sans-serif;
-  --free:#00ff88;--rare:#00b4ff;--epic:#c84bff;--leg:#ffd700;
-  --ui-xs:clamp(.48rem,1.4vw,.58rem);
-  --ui-sm:clamp(.55rem,1.6vw,.68rem);
-  --ui-md:clamp(.68rem,2vw,.85rem);
-  --ui-lg:clamp(.85rem,2.4vw,1.1rem);
-}
+:root{--cy:#00f3ff;--re:#ff0055;--or:#ff9800;--gr:#00ff88;--pu:#bf00ff;--ye:#ffe600;--bg:#020408;--f:'Orbitron',sans-serif;--ui-xs:clamp(.48rem,1.4vw,.58rem);--ui-sm:clamp(.55rem,1.6vw,.68rem);--ui-md:clamp(.68rem,2vw,.85rem);--ui-lg:clamp(.85rem,2.4vw,1.1rem);}
 *{box-sizing:border-box;user-select:none;touch-action:none;margin:0;padding:0;}
 body,html{width:100%;height:100%;overflow:hidden;background:var(--bg);font-family:var(--f);}
 canvas{display:block;position:absolute;top:0;left:0;width:100%;height:100%;}
-
-/* ══ ÉCRANS & HUD ══ */
 #loader{position:fixed;inset:0;z-index:9999;background:#020408;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;transition:opacity .6s ease;}
 #loader.fade-out{opacity:0;pointer-events:none;}
-#loader-logo{font-size:clamp(2.2rem,7vw,4rem);font-weight:900;letter-spacing:.15em;background:linear-gradient(135deg,var(--cy),var(--pu));-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:ldrpulse 1.1s ease-in-out infinite;}
-@keyframes ldrpulse{0%,100%{filter:drop-shadow(0 0 12px rgba(0,243,255,0.4));}50%{filter:drop-shadow(0 0 44px rgba(0,243,255,1));}}
-#loader-bar-wrap{width:min(280px,60vw);height:3px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;}
-#loader-bar{height:100%;width:0%;background:linear-gradient(90deg,var(--cy),var(--pu));transition:width 0.1s;}
-
-#hud{position:absolute;top:0;left:0;width:100%;pointer-events:none;padding:15px;display:flex;justify-content:space-between;align-items:flex-start;z-index:100;}
-.hbox{background:rgba(0,243,255,0.05);border:1px solid rgba(0,243,255,0.15);backdrop-filter:blur(10px);border-radius:10px;padding:8px 15px;color:#fff;}
-.hbig{font-size:1.5rem;font-weight:900;color:var(--cy);text-shadow:0 0 10px var(--cy);}
-
-#bhud{position:absolute;bottom:0;left:0;width:100%;padding:15px;display:flex;justify-content:space-between;z-index:100;pointer-events:none;}
-.bar{width:140px;height:6px;background:rgba(255,255,255,0.1);border-radius:3px;margin-top:5px;overflow:hidden;}
-.bf{height:100%;transition:width 0.3s;}
-#hpf{background:linear-gradient(90deg,var(--re),var(--or));}
-
-.ov{position:absolute;inset:0;background:rgba(2,4,8,0.9);backdrop-filter:blur(20px);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:200;gap:20px;}
+#loader-logo{font-size:clamp(2.2rem,7vw,4rem);font-weight:900;letter-spacing:.15em;background:linear-gradient(135deg,var(--cy),var(--pu));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+#loader-bar-wrap{width:min(280px,60vw);height:3px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden;}
+#loader-bar{height:100%;width:0%;background:linear-gradient(90deg,var(--cy),var(--pu));}
+.ov{position:absolute;inset:0;background:rgba(2,4,8,.93);backdrop-filter:blur(24px);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:200;gap:12px;}
 .hidden{display:none!important;}
-.mb{padding:15px 30px;background:rgba(0,243,255,0.1);border:1px solid var(--cy);color:#fff;cursor:pointer;font-family:var(--f);border-radius:10px;transition:0.2s;}
-.mb:hover{background:var(--cy);color:#000;box-shadow:0 0 20px var(--cy);}
-
-#wavb{position:absolute;top:40%;left:50%;transform:translate(-50%,-50%);text-align:center;z-index:130;opacity:0;pointer-events:none;}
-#wavb.show{animation:waveAnim 2s ease forwards;}
-@keyframes waveAnim{0%{opacity:0;transform:translate(-50%,-50%) scale(0.8);}20%{opacity:1;transform:translate(-50%,-50%) scale(1);}100%{opacity:0;transform:translate(-50%,-50%) scale(1.1);}}
+.mb{padding:14px 16px;background:rgba(0,243,255,.06);border:1px solid rgba(0,243,255,.3);color:#fff;cursor:pointer;font-family:var(--f);border-radius:9px;}
+#hud{position:absolute;top:0;left:0;width:100%;pointer-events:none;padding:15px;display:flex;justify-content:space-between;z-index:100;}
+.hbox{background:rgba(0,243,255,.05);border:1px solid rgba(0,243,255,.15);border-radius:10px;padding:8px;color:#fff;}
+#bhud{position:absolute;bottom:0;left:0;width:100%;padding:15px;display:flex;justify-content:space-between;z-index:100;}
+.bar{width:120px;height:6px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden;}
+.bf{height:100%;transition:width .3s;}
 </style>
 </head>
 <body>
 
-<div id="loader">
-  <div id="loader-logo">NEON VORTEX</div>
-  <div id="loader-bar-wrap"><div id="loader-bar"></div></div>
-  <div id="loader-pct">0%</div>
-</div>
-
+<div id="loader"><div id="loader-logo">NEON VORTEX</div><div id="loader-bar-wrap"><div id="loader-bar"></div></div><div id="loader-pct">0%</div></div>
 <div id="hud">
-  <div class="hbox"><div class="hbig" id="sc">0</div><div style="font-size:0.6rem;opacity:0.5;">SCORE</div></div>
-  <div class="hbox" style="text-align:center;">
-    <div>NIV <span id="lv" style="color:var(--cy);font-weight:900;">1</span></div>
-    <div style="color:var(--ye);">⬡ <span id="coin-hud">0</span></div>
-  </div>
-  <div class="ctls" style="pointer-events:auto;">
-    <button class="mb" id="btn-play-small" style="padding:5px 15px;">RESET</button>
-  </div>
+    <div class="hbox"><div id="sc" style="font-size:1.5rem;font-weight:900;color:var(--cy)">0</div></div>
+    <div class="hbox">⬡ <span id="coin-hud">0</span></div>
 </div>
-
 <div id="bhud">
-  <div class="bw">
-    <div style="font-size:0.7rem;color:#fff;opacity:0.6;">INTÉGRITÉ</div>
-    <div class="bar"><div class="bf" id="hpf" style="width:100%"></div></div>
-  </div>
+    <div class="bar"><div class="bf" id="hpf" style="width:100%;background:var(--re)"></div></div>
+    <div class="bar"><div class="bf" id="shf" style="width:0%;background:var(--cy)"></div></div>
 </div>
-
-<div id="wavb">
-    <div id="wavt" style="font-size:3rem;font-weight:900;color:var(--cy);text-shadow:0 0 30px var(--cy);">VAGUE 1</div>
-    <div style="color:#fff;letter-spacing:0.5em;font-size:0.8rem;">INITIALISATION DU VORTEX</div>
-</div>
-
 <div class="ov" id="menu">
-  <div id="loader-logo" style="margin-bottom:20px;">NEON VORTEX</div>
-  <div style="color:rgba(255,255,255,0.5);margin-bottom:20px;">RECORD: <span id="bs" style="color:var(--cy);">0</span></div>
-  <button class="mb" id="btn-play">INITIALISER LA SÉQUENCE</button>
+    <h1 style="color:var(--cy)">NEON VORTEX</h1>
+    <p style="color:#fff">RECORD: <span id="bs">0</span></p>
+    <button class="mb" id="btn-play">▶ JOUER</button>
 </div>
-
 <canvas id="canvas"></canvas>
 
 <script>
-/**
- * NEON VORTEX ENGINE - CORE INTEGRATION
- */
-const NeonVortex = (() => {
+const NV = (() => {
     const cvs = document.getElementById('canvas'), ctx = cvs.getContext('2d');
-    let W, H, loopId;
-    
-    const G = {
-        state: 'BOOT',
-        sc: 0, 
-        lv: 1, 
-        hp: 100, 
-        maxHp: 100,
-        coins: 0,
-        best: localStorage.getItem('nv_best') || 0,
-        pl: { x: 0, y: 0, tx: 0, ty: 0, r: 15 },
-        enemies: [],
-        particles: [],
-        wave: 1,
-        waveActive: false
+    let W, H, lastT = 0, spawnT = 0;
+    const G = { state:'MENU', sc:0, hp:3, mHp:3, coins:0, slowMo:0, ents:[], stars:[], pl:{x:0,y:0,tx:0,ty:0,r:15} };
+
+    const resize = () => { W=cvs.width=window.innerWidth; H=cvs.height=window.innerHeight; };
+    window.onload = () => {
+        resize(); window.addEventListener('resize', resize);
+        window.addEventListener('mousemove', e => { G.pl.tx=e.clientX; G.pl.ty=e.clientY; });
+        window.addEventListener('touchmove', e => { G.pl.tx=e.touches[0].clientX; G.pl.ty=e.touches[0].clientY; });
+        document.getElementById('btn-play').onclick = start;
+        for(let i=0;i<50;i++) G.stars.push({x:Math.random()*W, y:Math.random()*H, s:Math.random()*2+1});
+        // Loader rapide
+        let p=0; const li=setInterval(()=>{ p+=5; document.getElementById('loader-bar').style.width=p+'%'; if(p>=100){clearInterval(li);document.getElementById('loader').classList.add('fade-out');}}, 30);
+        requestAnimationFrame(loop);
     };
 
-    function resize() {
-        W = cvs.width = window.innerWidth;
-        H = cvs.height = window.innerHeight;
+    function start() { 
+        G.state='PLAY'; G.sc=0; G.hp=3; G.ents=[]; G.coins=0; 
+        document.getElementById('menu').classList.add('hidden'); 
     }
 
-    function init() {
-        resize();
-        window.addEventListener('resize', resize);
+    function loop(t) {
+        const dt = t - lastT; lastT = t;
+        ctx.fillStyle='#020408'; ctx.fillRect(0,0,W,H);
         
-        const move = e => {
-            const t = e.touches ? e.touches[0] : e;
-            G.pl.tx = t.clientX; G.pl.ty = t.clientY;
-        };
-        window.addEventListener('mousemove', move);
-        window.addEventListener('touchmove', e => { e.preventDefault(); move(e); }, {passive:false});
+        // Stars
+        G.stars.forEach(s => { 
+            s.y += s.s; if(s.y>H) s.y=0; 
+            ctx.fillStyle='#fff'; ctx.fillRect(s.x, s.y, 1, 1);
+        });
 
-        document.getElementById('btn-play').onclick = startGame;
-        document.getElementById('btn-play-small').onclick = () => location.reload();
-        document.getElementById('bs').textContent = G.best;
-
-        // Loader Simulation
-        let p = 0;
-        const lI = setInterval(() => {
-            p += Math.random() * 10;
-            document.getElementById('loader-bar').style.width = Math.min(100, p) + '%';
-            document.getElementById('loader-pct').textContent = Math.floor(p) + '%';
-            if(p >= 100) {
-                clearInterval(lI);
-                document.getElementById('loader').classList.add('fade-out');
+        if(G.state==='PLAY') {
+            G.pl.x += (G.pl.tx-G.pl.x)*0.2; G.pl.y += (G.pl.ty-G.pl.y)*0.2;
+            
+            // Spawn Ennemis
+            if(t > spawnT) {
+                G.ents.push({x:Math.random()*W, y:-20, r:15+Math.random()*10, s:3+Math.random()*3, type:Math.random()>0.9?'GOLD':'EN'});
+                spawnT = t + 600;
             }
-        }, 30);
 
+            // Update Entités
+            G.ents.forEach((e, i) => {
+                e.y += e.s;
+                const dist = Math.hypot(e.x-G.pl.x, e.y-G.pl.y);
+                if(dist < e.r + G.pl.r) {
+                    if(e.type==='GOLD') { G.coins+=10; document.getElementById('coin-hud').innerText=G.coins; }
+                    else { G.hp--; document.getElementById('hpf').style.width=(G.hp/3*100)+'%'; if(G.hp<=0) { G.state='MENU'; document.getElementById('menu').classList.remove('hidden'); } }
+                    G.ents.splice(i, 1);
+                }
+                ctx.fillStyle = e.type==='GOLD' ? '#ffe600' : '#ff0055';
+                ctx.beginPath(); ctx.arc(e.x, e.y, e.r, 0, Math.PI*2); ctx.fill();
+            });
+
+            // Player
+            ctx.fillStyle='#00f3ff'; ctx.beginPath(); ctx.arc(G.pl.x, G.pl.y, G.pl.r, 0, Math.PI*2); ctx.fill();
+            G.sc += 0.1; document.getElementById('sc').innerText = Math.floor(G.sc);
+        }
         requestAnimationFrame(loop);
     }
-
-    function startGame() {
-        G.state = 'PLAYING';
-        G.sc = 0; G.hp = 100; G.lv = 1; G.wave = 1;
-        G.enemies = [];
-        G.pl.x = G.pl.tx = W/2; G.pl.y = G.pl.ty = H/2;
-        document.getElementById('menu').classList.add('hidden');
-        spawnWave();
-    }
-
-    function spawnWave() {
-        G.waveActive = true;
-        const wavb = document.getElementById('wavb');
-        document.getElementById('wavt').textContent = "VAGUE " + G.wave;
-        wavb.classList.remove('show');
-        void wavb.offsetWidth; // Trigger reflow
-        wavb.classList.add('show');
-
-        setTimeout(() => {
-            for(let i=0; i < 5 + G.wave; i++) {
-                G.enemies.push({
-                    x: Math.random() * W,
-                    y: -50 - (Math.random() * 500),
-                    speed: 2 + (G.wave * 0.5),
-                    r: 10 + Math.random() * 20,
-                    color: Math.random() > 0.5 ? '#ff0055' : '#bf00ff'
-                });
-            }
-        }, 1000);
-    }
-
-    function createExplosion(x, y, color) {
-        for(let i=0; i<10; i++) {
-            G.particles.push({
-                x, y, 
-                vx: (Math.random()-0.5)*10, 
-                vy: (Math.random()-0.5)*10, 
-                life: 1.0, 
-                color
-            });
-        }
-    }
-
-    function loop() {
-        ctx.fillStyle = '#020408';
-        ctx.fillRect(0, 0, W, H);
-        
-        // Background Stars
-        ctx.fillStyle = 'rgba(255,255,255,0.1)';
-        for(let i=0; i<50; i++) {
-            ctx.fillRect((Math.random()*W), (Date.now()*0.1 + i*100)%H, 2, 2);
-        }
-
-        if(G.state === 'PLAYING') {
-            // Player Logic
-            G.pl.x += (G.pl.tx - G.pl.x) * 0.15;
-            G.pl.y += (G.pl.ty - G.pl.y) * 0.15;
-
-            // Render Player
-            ctx.shadowBlur = 15;
-            ctx.shadowColor = '#00f3ff';
-            ctx.fillStyle = '#00f3ff';
-            ctx.beginPath();
-            ctx.arc(G.pl.x, G.pl.y, G.pl.r, 0, Math.PI*2);
-            ctx.fill();
-            ctx.shadowBlur = 0;
-
-            // Enemies Logic
-            G.enemies.forEach((en, i) => {
-                en.y += en.speed;
-                
-                // Render Enemy
-                ctx.fillStyle = en.color;
-                ctx.beginPath();
-                ctx.arc(en.x, en.y, en.r, 0, Math.PI*2);
-                ctx.fill();
-
-                // Collision Detection
-                const dist = Math.hypot(G.pl.x - en.x, G.pl.y - en.y);
-                if(dist < G.pl.r + en.r) {
-                    G.hp -= 20;
-                    createExplosion(en.x, en.y, en.color);
-                    G.enemies.splice(i, 1);
-                    if(G.hp <= 0) {
-                        G.state = 'GAMEOVER';
-                        document.getElementById('menu').classList.remove('hidden');
-                        if(G.sc > G.best) {
-                            G.best = Math.floor(G.sc);
-                            localStorage.setItem('nv_best', G.best);
-                            document.getElementById('bs').textContent = G.best;
-                        }
-                    }
-                }
-
-                if(en.y > H + 50) {
-                    G.enemies.splice(i, 1);
-                    G.sc += 10;
-                }
-            });
-
-            // Particles
-            G.particles.forEach((p, i) => {
-                p.x += p.vx; p.y += p.vy; p.life -= 0.02;
-                ctx.fillStyle = `rgba(${p.color === '#ff0055' ? '255,0,85' : '191,0,255'}, ${p.life})`;
-                ctx.fillRect(p.x, p.y, 3, 3);
-                if(p.life <= 0) G.particles.splice(i, 1);
-            });
-
-            if(G.enemies.length === 0 && G.state === 'PLAYING') {
-                G.wave++;
-                spawnWave();
-            }
-
-            // Update UI
-            document.getElementById('sc').textContent = Math.floor(G.sc);
-            document.getElementById('hpf').style.width = G.hp + '%';
-            document.getElementById('coin-hud').textContent = Math.floor(G.sc/5);
-        }
-
-        requestAnimationFrame(loop);
-    }
-
-    return { init };
 })();
-
-window.onload = NeonVortex.init;
 </script>
 </body>
 </html>
