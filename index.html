@@ -1,1 +1,226 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>GPU MELTDOWN v10 - NUCLEAR TOGGLE</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <style>
+        body { margin:0; overflow:hidden; background:#000; touch-action:none; font-family:monospace; }
+        canvas { position:absolute; top:0; left:0; width:100%; height:100%; image-rendering: pixelated; }
+        .overlay { 
+            position:absolute; top:10px; left:10px; color:#0ff; 
+            text-shadow: 0 0 12px #0ff; z-index: 100; pointer-events:none;
+        }
+        #toggleBtn {
+            position:absolute; bottom:20px; left:50%; transform:translateX(-50%);
+            z-index: 100; padding:15px 40px; font-size:18px; font-weight:bold;
+            background:#300; color:#f66; border:2px solid #f00; border-radius:8px;
+            cursor:pointer; box-shadow:0 0 20px #f00;
+        }
+        #toggleBtn.running { background:#030; color:#0f0; border-color:#0f0; box-shadow:0 0 20px #0f0; }
+    </style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div class="overlay" id="info">GPU MELTDOWN v10 NUCLEAR • Appuie sur le bouton pour démarrer</div>
+<button id="toggleBtn">DÉMARRER LE TEST</button>
 
+<script>
+// === GPU MELTDOWN v10 NUCLEAR - TOGGLE UNIQUE ===
+const canvas = document.getElementById('gl');
+const gl = canvas.getContext('webgl2', { alpha: false, antialias: false, depth: false, stencil: false }) || 
+           canvas.getContext('webgl', { alpha: false, antialias: false });
+
+let w, h, time = 0, mouseX = 0.5, mouseY = 0.5, frame = 0;
+let isRunning = false;
+let animationFrame = null;
+
+function resize() {
+    w = canvas.width  = Math.floor(window.innerWidth * 1.12);
+    h = canvas.height = Math.floor(window.innerHeight * 1.12);
+    gl.viewport(0, 0, w, h);
+}
+resize();
+window.addEventListener('resize', resize);
+
+document.addEventListener('mousemove', e => { 
+    mouseX = e.clientX / window.innerWidth; 
+    mouseY = e.clientY / window.innerHeight; 
+});
+document.addEventListener('touchmove', e => {
+    if(e.touches.length) {
+        mouseX = e.touches[0].clientX / window.innerWidth;
+        mouseY = e.touches[0].clientY / window.innerHeight;
+    }
+}, {passive: true});
+
+const vsSource = `#version 300 es
+in vec2 aPos; void main() { gl_Position = vec4(aPos, 0.0, 1.0); }`;
+
+const fsSource = `#version 300 es
+precision highp float;
+out vec4 fragColor;
+uniform float uTime;
+uniform vec2 uRes;
+uniform vec2 uMouse;
+
+float hash(vec3 p) {
+    p = fract(p * vec3(0.3183099,0.3678794,0.2957142) + 0.1);
+    p *= 17.0;
+    return fract(p.x*p.y*p.z*(p.x+p.y+p.z));
+}
+
+float noise(vec3 x) {
+    vec3 i = floor(x), f = fract(x);
+    f = f*f*(3.0-2.0*f);
+    return mix(mix(mix(hash(i+vec3(0,0,0)), hash(i+vec3(1,0,0)), f.x),
+                   mix(hash(i+vec3(0,1,0)), hash(i+vec3(1,1,0)), f.x), f.y),
+               mix(mix(hash(i+vec3(0,0,1)), hash(i+vec3(1,0,1)), f.x),
+                   mix(hash(i+vec3(0,1,1)), hash(i+vec3(1,1,1)), f.x), f.y), f.z);
+}
+
+float fbm(vec3 p) {
+    float v = 0.0, a = 0.5;
+    vec3 shift = vec3(uTime * 0.28);
+    for(int i = 0; i < 22; i++) {
+        v += a * noise(p + shift);
+        p *= 2.042;
+        a *= 0.458;
+        shift = mat3(0.8,-0.6,0,0.6,0.8,0,0,0,1) * shift * 1.05;
+    }
+    return v;
+}
+
+float map(vec3 p) {
+    float d = length(p) - 1.52 + sin(uTime*1.25 + p.y*6.0)*0.72;
+    d = min(d, p.y + 3.3 + fbm(p*2.85 + uTime*0.52)*2.45);
+    d = min(d, length(p - vec3(sin(uTime*1.4)*5.8, sin(uTime*1.0)*3.0, cos(uTime*1.2)*5.2)) - 1.05);
+    d = min(d, length(p*1.82 + vec3(sin(uTime*2.2), cos(uTime*2.0), sin(uTime*2.5))) - 1.48 + fbm(p*6.8)*0.82);
+    vec3 p3 = p * 2.1 + vec3(sin(uTime*3.1), cos(uTime*2.8), sin(uTime*3.3));
+    d = min(d, length(p3) - 1.35 + fbm(p3*4.5)*0.9);
+    return d;
+}
+
+vec3 normal(vec3 p) {
+    vec2 e = vec2(0.0005,0.0);
+    return normalize(vec3(map(p+e.xyy)-map(p-e.xyy), map(p+e.yxy)-map(p-e.yxy), map(p+e.yyx)-map(p-e.yyx)));
+}
+
+vec3 raymarch(vec3 ro, vec3 rd) {
+    float t = 0.0;
+    for(int i = 0; i < 420; i++) {
+        vec3 p = ro + rd * t;
+        float d = map(p);
+        if(d < 0.001 || t > 160.0) break;
+        t += d * 0.62;
+    }
+    return vec3(t,0.0,0.0);
+}
+
+float mandel(vec2 c) {
+    vec2 z = vec2(0.0);
+    for(int i = 0; i < 380; i++) {
+        z = vec2(z.x*z.x - z.y*z.y, 2.0*z.x*z.y) + c;
+        if(dot(z,z) > 4.0) return float(i)/380.0;
+    }
+    return 0.0;
+}
+
+void main() {
+    vec2 uv = (gl_FragCoord.xy - uRes*0.5)/uRes.y;
+    vec3 cam = vec3(sin(uTime*0.31 + uMouse.x*9.0)*9.0, 3.6 + uMouse.y*7.0, cos(uTime*0.28)*11.5);
+    vec3 dir = normalize(vec3(uv*1.22, -0.9));
+
+    vec3 hit = raymarch(cam, dir);
+    vec3 col = vec3(0.0);
+
+    if(hit.x < 155.0) {
+        vec3 p = cam + dir * hit.x;
+        vec3 n = normal(p);
+        col = n * 0.5 + 0.5;
+        col += fbm(p * 6.8 + uTime * 1.9) * 4.1;
+        col += pow(max(0.0, fbm(p * 15.0)), 3.8) * 3.6;
+    } else {
+        col = vec3(0.006, 0.0, 0.042);
+    }
+
+    vec2 muv = uv * (3.4 + sin(uTime*0.48)*1.6) + vec2(sin(uTime*0.19), cos(uTime*0.27))*0.65;
+    float m = mandel(muv * 1.9);
+    col = mix(col, vec3(m*3.6, m*0.95, pow(m,3.1)*4.8), 0.76);
+
+    col = pow(col, vec3(0.67));
+    col += noise(vec3(uv*240.0, uTime*35.0)) * 0.42;
+    col += noise(vec3(uv*520.0, uTime*52.0)) * 0.28;
+    col += noise(vec3(uv*880.0, uTime*68.0)) * 0.15;
+    col = fract(col * 1.95 + uTime * 0.16);
+    col *= 1.0 + 0.18 * sin(uTime*38.0 + uv.x*130.0 + uv.y*95.0);
+
+    fragColor = vec4(col, 1.0);
+}`;
+
+const program = gl.createProgram();
+[gl.VERTEX_SHADER, gl.FRAGMENT_SHADER].forEach((type, i) => {
+    const shader = gl.createShader(type);
+    gl.shaderSource(shader, i === 0 ? vsSource : fsSource);
+    gl.compileShader(shader);
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) console.error(gl.getShaderInfoLog(shader));
+    gl.attachShader(program, shader);
+});
+gl.linkProgram(program);
+if (!gl.getProgramParameter(program, gl.LINK_STATUS)) console.error(gl.getProgramInfoLog(program));
+
+const buffer = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,1,1]), gl.STATIC_DRAW);
+
+const posLoc = gl.getAttribLocation(program, "aPos");
+gl.enableVertexAttribArray(posLoc);
+gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+
+function heavyCPUBurn() {
+    let x = 0.0;
+    for(let i = 0; i < 480000; i++) {
+        x += Math.sin(time * (i % 2048)) * Math.cos(i * 0.0018 + time);
+    }
+    return x;
+}
+
+function render() {
+    if (!isRunning) return;
+    
+    time += 0.016;
+    frame++;
+
+    gl.useProgram(program);
+    gl.uniform1f(gl.getUniformLocation(program, "uTime"), time);
+    gl.uniform2f(gl.getUniformLocation(program, "uRes"), w, h);
+    gl.uniform2f(gl.getUniformLocation(program, "uMouse"), mouseX, mouseY);
+    
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+    if (frame % 2 === 0) heavyCPUBurn();
+
+    animationFrame = requestAnimationFrame(render);
+}
+
+const toggleBtn = document.getElementById('toggleBtn');
+toggleBtn.addEventListener('click', () => {
+    isRunning = !isRunning;
+    
+    if (isRunning) {
+        toggleBtn.textContent = "ARRÊTER LE TEST";
+        toggleBtn.classList.add('running');
+        document.getElementById('info').textContent = "GPU MELTDOWN v10 NUCLEAR • EN COURS...";
+        render();
+    } else {
+        toggleBtn.textContent = "DÉMARRER LE TEST";
+        toggleBtn.classList.remove('running');
+        document.getElementById('info').textContent = "GPU MELTDOWN v10 NUCLEAR • Arrêté";
+        if (animationFrame) cancelAnimationFrame(animationFrame);
+    }
+});
+
+// Démarrage automatique léger au chargement (optionnel)
+</script>
+</body>
+</html>
